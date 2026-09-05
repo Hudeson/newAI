@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK = ROOT / "docs" / "旺店通旗舰版-订单导入操作手册.md"
 TEMPLATE = ROOT / "templates" / "订单导入模板.csv"
+TEMPLATE_XLSX = ROOT / "templates" / "订单导入模板.xlsx"
 RAW_PUSH = ROOT / "examples" / "raw_trade_push_self2.json"
 TRADE_IMPORT = ROOT / "examples" / "trade_import_upload.json"
 
@@ -100,6 +101,22 @@ def check_csv() -> None:
         if len(postage_cells) != 1:
             fail(f"{tid}: 邮费 must appear on exactly one line")
 
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        if not TEMPLATE_XLSX.is_file():
+            fail("missing Excel template")
+        return
+    if not TEMPLATE_XLSX.is_file():
+        fail("missing Excel template")
+    wb = load_workbook(TEMPLATE_XLSX)
+    if "订单导入" not in wb.sheetnames or "填写说明" not in wb.sheetnames:
+        fail("xlsx must contain 订单导入 and 填写说明 sheets")
+    xheaders = [cell.value for cell in wb["订单导入"][1]]
+    missing_x = [h for h in REQUIRED_CSV_HEADERS if h not in xheaders]
+    if missing_x:
+        fail(f"xlsx missing headers: {missing_x}")
+
 
 def check_raw_push() -> None:
     payload = json.loads(RAW_PUSH.read_text(encoding="utf-8"))
@@ -152,6 +169,7 @@ def check_readme_links() -> None:
     for rel in (
         "docs/旺店通旗舰版-订单导入操作手册.md",
         "templates/订单导入模板.csv",
+        "templates/订单导入模板.xlsx",
         "examples/raw_trade_push_self2.json",
         "examples/trade_import_upload.json",
     ):

@@ -10,7 +10,8 @@
 
 配套样例：
 
-- [Excel / CSV 导入模板](templates/订单导入模板.csv)
+- [Excel 导入模板](templates/订单导入模板.xlsx)
+- [CSV 导入模板](templates/订单导入模板.csv)
 - [原始单推送请求样例](examples/raw_trade_push_self2.json)
 - [已完成订单推送请求样例](examples/trade_import_upload.json)
 
