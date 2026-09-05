@@ -245,10 +245,15 @@ def ppo_train(
 ) -> list[dict[str, float]]:
     """序列级 PPO。
 
-    每轮：用当前策略采样若干回答 → 奖励模型打分 → 以"奖励 - 批次均值"为
-    优势 → 用裁剪后的重要性比值做若干步更新，并对与参考策略的 KL 施加惩罚。
+    每轮：用当前策略采样若干回答 → 奖励模型打分 → **从奖励里扣掉与参考策略的
+    KL** → 归一化成优势 → 用裁剪后的重要性比值做若干步更新。
 
-    生产级实现会做 token 级 GAE 与独立价值网络，但裁剪目标、KL 约束、
+    KL 惩罚必须作用在**奖励**上（InstructGPT 的做法），而不是直接加到损失里。
+    后者会对每一条被采样到的序列施加一个方向一致的"降低其对数概率"的梯度，
+    而概率总和恒为 1，结果是把概率质量推到没被采样到的序列上，训练直接崩掉。
+    把它放进奖励，则只改变各条轨迹的相对优劣，语义才是正确的"别跑太远"。
+
+    生产级实现还会做 token 级 GAE 与独立价值网络，但裁剪目标、KL 约束、
     优势归一化这三个决定训练是否稳定的要素，与此处一致。
     """
     reference = copy.deepcopy(policy)
@@ -260,8 +265,9 @@ def ppo_train(
     history: list[dict[str, float]] = []
 
     for iteration in range(1, iterations + 1):
-        # --- rollout：用当前策略采样 ---
-        episodes: list[tuple[list[int], int, float, float]] = []
+        # --- rollout：用当前策略采样，并记录旧对数概率与参考对数概率 ---
+        episodes: list[tuple[list[int], int, float]] = []
+        rewards, penalties = [], []
         for prompt in prompts:
             prompt = [int(t) for t in prompt]
             for _ in range(samples_per_prompt):
@@ -273,29 +279,29 @@ def ppo_train(
                     rng=rng,
                 )
                 sequence = prompt + response
-                reward = reward_model.score(sequence)
                 with no_grad():
                     old_logprob = sequence_logprob(policy, sequence, len(prompt)).item()
-                episodes.append((sequence, len(prompt), reward, old_logprob))
+                    ref_logprob = sequence_logprob(reference, sequence, len(prompt)).item()
+                episodes.append((sequence, len(prompt), old_logprob))
+                rewards.append(reward_model.score(sequence))
+                penalties.append(old_logprob - ref_logprob)
 
-        rewards = np.array([episode[2] for episode in episodes])
-        advantages = rewards - rewards.mean()
+        rewards = np.array(rewards)
+        penalties = np.array(penalties)
+        shaped = rewards - kl_coef * penalties
+        advantages = shaped - shaped.mean()
         if advantages.std() > 1e-8:
             advantages = advantages / advantages.std()
 
         # --- 多轮小步更新 ---
         for _ in range(inner_epochs):
-            for (sequence, prompt_len, _, old_logprob), advantage in zip(episodes, advantages):
+            for (sequence, prompt_len, old_logprob), advantage in zip(episodes, advantages):
                 optimizer.zero_grad()
                 new_logprob = sequence_logprob(policy, sequence, prompt_len)
                 ratio = (new_logprob - old_logprob).exp()
                 unclipped = ratio * float(advantage)
                 clipped = _clip(ratio, 1 - clip_ratio, 1 + clip_ratio) * float(advantage)
-                surrogate = -_minimum(unclipped, clipped)
-
-                ref_logprob = sequence_logprob(reference, sequence, prompt_len).item()
-                kl = new_logprob - ref_logprob
-                loss = surrogate + kl_coef * kl
+                loss = -_minimum(unclipped, clipped)
                 loss.backward()
                 clip_grad_norm(policy.trainable_parameters(), 1.0)
                 optimizer.step()
@@ -304,10 +310,14 @@ def ppo_train(
             "iteration": float(iteration),
             "reward": float(rewards.mean()),
             "reward_std": float(rewards.std()),
+            "kl": float(penalties.mean()),
         }
         history.append(record)
         if verbose and (iteration % log_every == 0 or iteration == 1):
-            print(f"  iter {iteration:3d} | 平均奖励 {record['reward']:+.4f}")
+            print(
+                f"  iter {iteration:3d} | 平均奖励 {record['reward']:+.4f} | "
+                f"与参考的 KL {record['kl']:+.3f}"
+            )
     return history
 
 

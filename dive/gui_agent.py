@@ -78,6 +78,12 @@ class GUIEnvironment:
         self.start = start
         self.goal = goal
         self.transitions = transitions or {}
+        # 记录初始外观，否则上一局改过的开关会泄漏到下一局
+        self._initial = {
+            (name, element.id): (element.value, element.enabled)
+            for name, screen in screens.items()
+            for element in screen.elements
+        }
         self.reset()
 
     def reset(self) -> str:
@@ -86,8 +92,9 @@ class GUIEnvironment:
         self.state: dict[str, str | bool] = {}
         self.side_effects: list[str] = []
         self.pending_confirm: str | None = None
-        for screen in self.screens.values():
+        for name, screen in self.screens.items():
             for element in screen.elements:
+                element.value, element.enabled = self._initial[(name, element.id)]
                 if element.role == "toggle":
                     self.state[element.id] = element.value == "on"
         return self.observe()
