@@ -18,7 +18,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable, Sequence
 
-__all__ = ["CharTokenizer", "BPETokenizer", "END_OF_WORD"]
+__all__ = ["CharTokenizer", "WordTokenizer", "BPETokenizer", "END_OF_WORD"]
 
 END_OF_WORD = "</w>"
 
@@ -70,6 +70,56 @@ class CharTokenizer:
                 continue
             pieces.append(token)
         return "".join(pieces)
+
+
+class WordTokenizer:
+    """词级分词器：输入输出都是**词的列表**。
+
+    与字符级相比，词级词表让每个位置都对应一个真正的"选择"，
+    因此每步的熵更接近真实大模型。水印与隐写实验都依赖这一点。
+    """
+
+    def __init__(self, words: Iterable[str], specials: Sequence[str] = _DEFAULT_SPECIALS) -> None:
+        self.specials = list(specials)
+        self.itos = self.specials + sorted(set(words))
+        self.stoi = {token: index for index, token in enumerate(self.itos)}
+
+    @property
+    def vocab_size(self) -> int:
+        return len(self.itos)
+
+    @property
+    def pad_id(self) -> int:
+        return self.stoi["<pad>"]
+
+    @property
+    def bos_id(self) -> int:
+        return self.stoi["<bos>"]
+
+    @property
+    def eos_id(self) -> int:
+        return self.stoi["<eos>"]
+
+    @property
+    def unk_id(self) -> int:
+        return self.stoi["<unk>"]
+
+    def encode(self, tokens: Sequence[str], bos: bool = False, eos: bool = False) -> list[int]:
+        ids = [self.stoi.get(token, self.unk_id) for token in tokens]
+        if bos:
+            ids = [self.bos_id] + ids
+        if eos:
+            ids = ids + [self.eos_id]
+        return ids
+
+    def decode(self, ids: Iterable[int], skip_special: bool = True, sep: str = "") -> str:
+        pieces = []
+        for index in ids:
+            token = self.itos[int(index)]
+            if skip_special and token in self.specials:
+                continue
+            pieces.append(token)
+        return sep.join(pieces)
 
 
 class BPETokenizer:
