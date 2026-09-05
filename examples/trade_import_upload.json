@@ -1,0 +1,34 @@
+[
+  [
+    {
+      "trade_no": "JY202609050001",
+      "src_tids": "XX202609010088",
+      "src_oid": "XX202609010088-0",
+      "trade_type": 2,
+      "trade_from": 5,
+      "shop_name": "线下自有店",
+      "warehouse_name": "主仓",
+      "logistics_name": "中通快递",
+      "logistics_no": "ZT1234567890001",
+      "merchant_no": "SKU-RED-S",
+      "num": 2,
+      "order_price": 59,
+      "receivable": 118,
+      "post_amount": 8,
+      "goods_discount": 8,
+      "receiver_name": "张三",
+      "province": "北京市",
+      "city": "北京市",
+      "district": "朝阳区",
+      "receiver_address": "春天街道春天花园小区1号楼1单元101",
+      "receiver_mobile": "13800138000",
+      "buyer_nick": "zhangsan",
+      "buyer_message": "尽量工作日配送",
+      "cs_remark": "历史补单",
+      "invoice_type": 0,
+      "trade_time": "2026-09-01 10:12:00",
+      "pay_time": "2026-09-01 10:13:20",
+      "consign_time": "2026-09-02 16:40:00"
+    }
+  ]
+]
