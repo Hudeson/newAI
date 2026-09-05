@@ -1,0 +1,53 @@
+MIT License
+
+Copyright (c) 2026 dive-into-llms-numpy contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+NOTE ON SCOPE / 适用范围说明
+
+This license applies **only** to the original code, documentation and other
+content contained in this repository (`dive/`, `labs/`, `docs/`, `tests/`,
+`README.md`, `run_all_labs.sh`).
+
+本许可证仅适用于本仓库自身的原创内容（`dive/`、`labs/`、`docs/`、`tests/`、
+`README.md`、`run_all_labs.sh`）。
+
+This repository is an independent, original companion implementation that
+follows the *curriculum outline* of the open-source course 《动手学大模型
+Dive into LLMs》 (https://github.com/Lordog/dive-into-llms) by the team of
+Prof. Zhuosheng Zhang (张倬胜) at Shanghai Jiao Tong University. No text, code,
+slides, notebooks or figures from that upstream repository are copied,
+redistributed or derived from here — it is credited and linked as a reference
+only. The upstream repository carries no license file, and its authors retain
+all rights to their own materials.
+
+本仓库是一份独立的原创配套实现，仅遵循上海交通大学张倬胜老师团队开源课程
+《动手学大模型 Dive into LLMs》（https://github.com/Lordog/dive-into-llms）
+的**大纲顺序**。本仓库**没有**复制、再分发或改编上游仓库的任何文字、代码、
+课件、notebook 或图片，仅以引用和致谢的形式链接到上游。上游仓库未附带许可证
+文件，其材料的一切权利归其作者所有。
+
+Papers cited in `docs/` are referenced by title and arXiv/DOI link only; their
+copyright belongs to their respective authors and publishers.
+
+`docs/` 中引用的论文仅以标题与 arXiv/DOI 链接的形式出现，其著作权归各自的
+作者与出版方所有。
