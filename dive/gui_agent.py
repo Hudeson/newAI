@@ -125,11 +125,15 @@ class GUIEnvironment:
             self.pending_confirm = None
             return self._activate(element_id, confirmed=True)
 
-        element = self.screen.find(argument)
+        # type 的参数形如 ``id=要输入的内容``，其余动作的参数就是元素 id
+        target, _, typed = argument.partition("=")
+        target = target.strip() if action == "type" else argument
+
+        element = self.screen.find(target)
         if element is None:
-            return StepResult(self.observe(), info={"error": f"当前界面没有 id={argument} 的元素"})
+            return StepResult(self.observe(), info={"error": f"当前界面没有 id={target} 的元素"})
         if not element.enabled:
-            return StepResult(self.observe(), info={"error": f"{argument} 不可用"})
+            return StepResult(self.observe(), info={"error": f"{target} 不可用"})
 
         if action == "click":
             if element.confirm and self.pending_confirm != element.id:
@@ -138,7 +142,7 @@ class GUIEnvironment:
             return self._activate(element.id)
 
         if action == "type":
-            element.value = argument.split("=", 1)[1] if "=" in argument else argument
+            element.value = typed
             return StepResult(self.observe())
 
         return StepResult(self.observe(), info={"error": f"未知动作 {action}"})
