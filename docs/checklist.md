@@ -46,8 +46,8 @@
 - [ ] 知识卡片向量化（E5 后延，当前复用 chunk 向量）
 - [x] ACL 过滤检索 + Ask 引用二次校验
 - [x] LLM Gateway 初版（local provider + `usage_ledger`）
-- [ ] Next.js：上传、学习报告、对话（E6）
-- [x] **E5 review + 全量回归** [`milestones/E5-review.md`](./milestones/E5-review.md)
+- [x] Next.js：上传、学习报告、对话（E6）
+- [x] **E6 review + 全量回归** [`milestones/E6-review.md`](./milestones/E6-review.md)
 - [ ] 评测：隔离 + Recall + 学习字段完整率（持续）
 
 ## M3 Agent 与治理

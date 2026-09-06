@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from api.middleware import RequestIdMiddleware
@@ -22,6 +23,18 @@ app = FastAPI(
     description="Enterprise knowledge-base agent API",
 )
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(auth_router)
 app.include_router(uploads_router)
 app.include_router(documents_router)
@@ -84,6 +97,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E5",
+        "milestone": "E6",
         "request_id": getattr(request.state, "request_id", ""),
     }

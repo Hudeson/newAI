@@ -49,6 +49,14 @@ class MeResponse(BaseModel):
     role: str
 
 
+class UserOut(BaseModel):
+    user_id: str
+    email: str
+    display_name: str
+    role: str
+    status: str
+
+
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     slug: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9-]+$")
@@ -136,6 +144,26 @@ def me(auth: AuthContext = Depends(get_current_auth), db: Session = Depends(get_
         display_name=user.display_name,
         role=user.role,
     )
+
+
+@router.get("/users", response_model=list[UserOut])
+def list_users(
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> list[UserOut]:
+    rows = db.scalars(
+        select(User).where(User.tenant_id == auth.tenant_id).order_by(User.created_at.asc())
+    ).all()
+    return [
+        UserOut(
+            user_id=u.id,
+            email=u.email,
+            display_name=u.display_name,
+            role=u.role,
+            status=u.status,
+        )
+        for u in rows
+    ]
 
 
 @router.get("/workspaces", response_model=list[WorkspaceOut])

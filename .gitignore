@@ -9,8 +9,10 @@ data/
 *.db
 .DS_Store
 node_modules/
+.next/
 dist/
 build/
 *.egg-info/
 .coverage
 htmlcov/
+apps/web/.env.local
