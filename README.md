@@ -7,7 +7,8 @@
 ## 文档
 
 - **完整技术架构（总览）**：[`docs/technical-architecture.md`](./docs/technical-architecture.md)
-- **执行计划**：[`docs/execution-plan.md`](./docs/execution-plan.md)
+- **项目整体计划**：[`docs/project-plan.md`](./docs/project-plan.md)
+- **执行计划（近端切片）**：[`docs/execution-plan.md`](./docs/execution-plan.md)
 - 架构与计划：[`docs/personal-knowledge-base-agent.md`](./docs/personal-knowledge-base-agent.md)
 - 数据模型 / 状态机：[`docs/data-model.md`](./docs/data-model.md)
 - API 契约草案：[`docs/api-contracts.md`](./docs/api-contracts.md)
