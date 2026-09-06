@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, File, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.auth import AuthContext, get_current_auth
+from shared.config import get_settings
 from shared.db import get_db
-from shared.db.models import Document, DocumentVersion, UploadJob, Workspace
+from shared.db.models import AuditEvent, Document, DocumentVersion, UploadJob, Workspace
 from shared.errors import AppError, ErrorCode
 from shared.storage import get_storage
+from workers.pipeline import process_upload_job
 
 router = APIRouter(prefix="/v1", tags=["uploads"])
 
@@ -208,6 +212,52 @@ def complete_upload(
     version = db.scalar(select(DocumentVersion).where(DocumentVersion.id == job.version_id))
     if version is not None:
         version.status = "queued"
+
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="upload.completed",
+            resource_type="upload_job",
+            resource_id=job.id,
+            detail=json.dumps({"document_id": job.document_id}),
+        )
+    )
+    db.flush()
+
+    # Personal/dev profile: process inline so API clients reach indexed without a separate worker.
+    if get_settings().profile == "personal":
+        try:
+            process_upload_job(db, job.id, actor_id=auth.user_id)
+        except Exception as exc:  # noqa: BLE001
+            raise AppError(
+                ErrorCode.INTERNAL_ERROR,
+                f"ingest failed: {exc}",
+                status_code=500,
+            ) from exc
+
+    db.refresh(job)
+    return _job_out(job)
+
+
+@router.post("/upload-jobs/{job_id}/process", response_model=UploadJobOut)
+def process_job(
+    job_id: str,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> UploadJobOut:
+    job = db.scalar(
+        select(UploadJob).where(UploadJob.id == job_id, UploadJob.tenant_id == auth.tenant_id)
+    )
+    if job is None:
+        raise AppError(ErrorCode.NOT_FOUND, "upload job not found", status_code=404)
+    try:
+        process_upload_job(db, job.id, actor_id=auth.user_id)
+    except ValueError as exc:
+        raise AppError(ErrorCode.CONFLICT, str(exc), status_code=409) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise AppError(ErrorCode.INTERNAL_ERROR, f"ingest failed: {exc}", status_code=500) from exc
+    db.refresh(job)
     return _job_out(job)
 
 
