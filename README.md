@@ -64,7 +64,7 @@ python3 -m hf_integration whoami
 
 常用环境变量见 `.env.example`：`HF_TOKEN`、`HF_MODEL`、`HF_EMBED_MODEL`、`HF_PROVIDER`、`HF_ENDPOINT`、`HF_TIMEOUT`。
 
-默认聊天模型：`HuggingFaceH4/zephyr-7b-beta`（可通过 `HF_MODEL` 或 `--model` 覆盖）。  
+默认聊天模型：`meta-llama/Llama-3.1-8B-Instruct`（可通过 `HF_MODEL` 或 `--model` 覆盖）。  
 推理走 `huggingface_hub.InferenceClient`，`HF_PROVIDER=auto` 会按账号可用的 Inference Providers 自动路由。
 
 ## 本地推理（无需 HF_TOKEN）

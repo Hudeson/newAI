@@ -12,7 +12,9 @@ from hf_integration.config import (
 )
 
 
-def test_load_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_settings_defaults(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Avoid picking up the project's local .env while asserting pure defaults.
+    monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("HUGGINGFACE_HUB_TOKEN", raising=False)
     monkeypatch.delenv("HF_ENDPOINT", raising=False)
@@ -65,3 +67,29 @@ def test_apply_hub_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
 
     apply_hub_endpoint("https://hf-mirror.com/")
     assert os.environ["HF_ENDPOINT"] == "https://hf-mirror.com"
+
+
+def test_load_dotenv_fills_missing_env(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text("HF_TOKEN=hf_from_file\nHF_MODEL=org/from-file\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("HF_MODEL", raising=False)
+
+    from hf_integration.config import load_settings
+
+    settings = load_settings()
+    assert settings.token == "hf_from_file"
+    assert settings.model == "org/from-file"
+
+
+def test_load_dotenv_does_not_override_existing(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text("HF_TOKEN=hf_from_file\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HF_TOKEN", "hf_from_env")
+
+    from hf_integration.config import load_settings
+
+    settings = load_settings()
+    assert settings.token == "hf_from_env"

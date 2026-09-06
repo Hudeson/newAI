@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 
-DEFAULT_CHAT_MODEL = "HuggingFaceH4/zephyr-7b-beta"
+DEFAULT_CHAT_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
 DEFAULT_EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 DEFAULT_PROVIDER = "auto"
 DEFAULT_TIMEOUT = 60.0
@@ -28,6 +29,23 @@ class Settings:
         return bool(self.token)
 
 
+def _load_dotenv(path: str | Path | None = None) -> None:
+    """Load KEY=VALUE pairs from a local .env without overriding existing env vars."""
+
+    env_path = Path(path) if path is not None else Path.cwd() / ".env"
+    if not env_path.is_file():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def _env(name: str, default: str | None = None) -> str | None:
     value = os.environ.get(name)
     if value is None or value.strip() == "":
@@ -45,6 +63,8 @@ def load_settings(
     timeout: float | None = None,
 ) -> Settings:
     """Load settings, allowing explicit overrides to win over env vars."""
+
+    _load_dotenv()
 
     raw_timeout = _env("HF_TIMEOUT")
     resolved_timeout = (
