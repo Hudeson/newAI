@@ -101,9 +101,12 @@ class HuggingFaceClient:
         apply_hub_endpoint(self.settings.endpoint)
 
         provider: Any = self.settings.provider
-        if provider in (None, "", "none"):
+        self._local = str(provider or "").lower() == "local"
+        if provider in (None, "", "none", "local"):
             provider = None
 
+        # Remote InferenceClient is unused for provider=local; still construct a
+        # harmless client so dependency injection / tests keep working.
         self._inference = inference_client or InferenceClient(
             model=self.settings.model,
             token=self.settings.token,
@@ -133,6 +136,15 @@ class HuggingFaceClient:
 
         payload = self._normalize_messages(messages, system=system)
         target = model or self.settings.model
+
+        if self._local:
+            return self._local_chat(
+                payload,
+                model=target,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=stream,
+            )
 
         if stream:
             return self._stream_chat(
@@ -187,6 +199,21 @@ class HuggingFaceClient:
 
         target = model or self.settings.model
 
+        if self._local:
+            from .local import LocalBackendUnavailable, local_generate
+
+            try:
+                text_out = local_generate(
+                    prompt,
+                    model=target,
+                    max_new_tokens=max_new_tokens,
+                    temperature=temperature,
+                    return_full_text=return_full_text,
+                )
+            except LocalBackendUnavailable as exc:
+                raise HuggingFaceError(str(exc)) from exc
+            return GenerationResult(text=text_out, model=target)
+
         def _call() -> Any:
             return self._inference.text_generation(
                 prompt,
@@ -215,6 +242,16 @@ class HuggingFaceClient:
         """Feature extraction / embeddings."""
 
         target = model or self.settings.embed_model
+
+        if self._local:
+            from .local import LocalBackendUnavailable, local_embed
+
+            try:
+                rows = local_embed(text, model=target, normalize=normalize)
+            except LocalBackendUnavailable as exc:
+                raise HuggingFaceError(str(exc)) from exc
+            dims = len(rows[0]) if rows else 0
+            return EmbeddingResult(vectors=rows, model=target, dimensions=dims)
 
         def _call() -> Any:
             return self._inference.feature_extraction(
@@ -291,6 +328,36 @@ class HuggingFaceClient:
             "type": data.get("type"),
             "email": data.get("email"),
         }
+
+    def _local_chat(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str,
+        max_tokens: int,
+        temperature: float,
+        stream: bool,
+    ) -> ChatResult | Iterator[str]:
+        from .local import LocalBackendUnavailable, local_chat
+
+        try:
+            content = local_chat(
+                messages,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except LocalBackendUnavailable as exc:
+            raise HuggingFaceError(str(exc)) from exc
+
+        if stream:
+
+            def _chunks() -> Iterator[str]:
+                yield content
+
+            return _chunks()
+
+        return ChatResult(content=content, model=model, finish_reason="stop")
 
     def _stream_chat(
         self,

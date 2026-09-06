@@ -20,7 +20,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", help="Override HF_MODEL")
     parser.add_argument("--token", help="Override HF_TOKEN")
     parser.add_argument("--endpoint", help="Override HF_ENDPOINT (Hub mirror)")
-    parser.add_argument("--provider", help="Override HF_PROVIDER (default: auto)")
+    parser.add_argument("--provider", help="Override HF_PROVIDER (auto|hf-inference|local)")
     parser.add_argument("--timeout", type=float, help="Request timeout seconds")
 
     sub = parser.add_subparsers(dest="command", required=True)

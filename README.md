@@ -67,7 +67,23 @@ python3 -m hf_integration whoami
 默认聊天模型：`HuggingFaceH4/zephyr-7b-beta`（可通过 `HF_MODEL` 或 `--model` 覆盖）。  
 推理走 `huggingface_hub.InferenceClient`，`HF_PROVIDER=auto` 会按账号可用的 Inference Providers 自动路由。
 
+## 本地推理（无需 HF_TOKEN）
+
+没有 token 时可用 `transformers` 在 CPU 上跑小模型：
+
+```bash
+python3 -m pip install torch transformers --index-url https://download.pytorch.org/whl/cpu
+python3 -m pip install transformers  # if not pulled above
+
+python3 -m hf_integration --provider local --model sshleifer/tiny-gpt2 \
+  generate "Hello, my name is" --max-new-tokens 20
+
+python3 -m hf_integration --provider local --model sshleifer/tiny-gpt2 \
+  chat "用一句话打招呼"
+```
+
 ## 测试
+
 
 单元测试全部使用 mock，不需要 token、不下载权重：
 
