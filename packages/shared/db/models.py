@@ -155,3 +155,38 @@ class DocumentAcl(Base):
     principal_id: Mapped[str] = mapped_column(String(36), nullable=False)
     permission: Mapped[str] = mapped_column(String(32), default="read")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LearningReport(Base):
+    __tablename__ = "learning_reports"
+    __table_args__ = (
+        UniqueConstraint("document_id", "version_id", name="uq_learning_report_doc_version"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    version_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="draft")  # draft|published
+    summary: Mapped[str] = mapped_column(Text, default="")
+    outline_json: Mapped[str] = mapped_column(Text, default="[]")
+    key_points_json: Mapped[str] = mapped_column(Text, default="[]")
+    provider: Mapped[str] = mapped_column(String(64), default="local-extractive")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class UsageLedger(Base):
+    __tablename__ = "usage_ledger"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    operation: Mapped[str] = mapped_column(String(64), nullable=False)  # learn|ask|embed
+    provider: Mapped[str] = mapped_column(String(64), default="local")
+    model: Mapped[str] = mapped_column(String(64), default="local-extractive")
+    input_tokens: Mapped[int] = mapped_column(default=0)
+    output_tokens: Mapped[int] = mapped_column(default=0)
+    detail: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

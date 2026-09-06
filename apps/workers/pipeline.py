@@ -90,6 +90,18 @@ def process_upload_job(db: Session, job_id: str, *, actor_id: str | None = None)
             )
         )
         db.flush()
+
+        # E5: auto-learn after index (personal/team local path).
+        from shared.learn import learn_document
+
+        learn_document(
+            db,
+            tenant_id=job.tenant_id,
+            document_id=job.document_id,
+            version_id=job.version_id,
+            actor_id=actor_id or job.created_by,
+        )
+
         logger.info("job_indexed", job_id=job.id, chunks=len(pieces))
         return ProcessResult(
             job_id=job.id,

@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
+from shared.ask import ask as run_ask
+from shared.db import get_db
+from shared.db.models import UsageLedger
+
+router = APIRouter(prefix="/v1", tags=["ask"])
+
+
+class AskRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class CitationOut(BaseModel):
+    chunk_id: str
+    document_id: str
+    version_id: str
+    workspace_id: str
+    ordinal: int
+    score: float
+    snippet: str
+
+
+class AskResponse(BaseModel):
+    answer: str
+    citations: list[CitationOut]
+
+
+class UsageOut(BaseModel):
+    id: str
+    operation: str
+    provider: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+
+
+@router.post("/ask", response_model=AskResponse)
+def ask(
+    body: AskRequest,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> AskResponse:
+    result = run_ask(
+        db,
+        tenant_id=auth.tenant_id,
+        user_id=auth.user_id,
+        question=body.question,
+        limit=body.limit,
+    )
+    return AskResponse(
+        answer=result.answer,
+        citations=[
+            CitationOut(
+                chunk_id=c.chunk_id,
+                document_id=c.document_id,
+                version_id=c.version_id,
+                workspace_id=c.workspace_id,
+                ordinal=c.ordinal,
+                score=c.score,
+                snippet=c.snippet,
+            )
+            for c in result.citations
+        ],
+    )
+
+
+@router.get("/usage", response_model=list[UsageOut])
+def list_usage(
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> list[UsageOut]:
+    rows = db.scalars(
+        select(UsageLedger)
+        .where(UsageLedger.tenant_id == auth.tenant_id)
+        .order_by(UsageLedger.created_at.desc())
+        .limit(50)
+    ).all()
+    return [
+        UsageOut(
+            id=r.id,
+            operation=r.operation,
+            provider=r.provider,
+            model=r.model,
+            input_tokens=r.input_tokens,
+            output_tokens=r.output_tokens,
+        )
+        for r in rows
+    ]

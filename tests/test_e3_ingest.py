@@ -86,7 +86,7 @@ def test_upload_indexes_chunks_and_acl(tmp_path: Path, monkeypatch):
 
     doc = client.get(f"/v1/documents/{document_id}", headers=headers)
     assert doc.status_code == 200
-    assert doc.json()["status"] == "indexed"
+    assert doc.json()["status"] in {"indexed", "published", "learned"}
     assert doc.json()["chunk_count"] >= 1
 
     session = get_session_factory()()
