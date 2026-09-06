@@ -159,6 +159,63 @@ def list_workspaces(
     ]
 
 
+class InviteUserRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(default="", max_length=200)
+    role: str = Field(default="member", pattern=r"^(member|viewer|admin)$")
+
+
+class InviteUserResponse(BaseModel):
+    user_id: str
+    tenant_id: str
+    email: str
+    role: str
+    access_token: str
+    token_type: str = "bearer"
+
+
+@router.post("/users/invite", response_model=InviteUserResponse)
+def invite_user(
+    body: InviteUserRequest,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> InviteUserResponse:
+    email = str(body.email).lower()
+    exists = db.scalar(select(User).where(User.tenant_id == auth.tenant_id, User.email == email))
+    if exists:
+        raise AppError(ErrorCode.CONFLICT, "user already exists", status_code=409)
+
+    user = User(
+        tenant_id=auth.tenant_id,
+        email=email,
+        display_name=body.display_name or email.split("@")[0],
+        password_hash=hash_password(body.password),
+        role=body.role,
+    )
+    db.add(user)
+    db.flush()
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="auth.invite",
+            resource_type="user",
+            resource_id=user.id,
+        )
+    )
+    token = create_access_token(
+        user_id=user.id, tenant_id=user.tenant_id, role=user.role, email=user.email
+    )
+    return InviteUserResponse(
+        user_id=user.id,
+        tenant_id=user.tenant_id,
+        email=user.email,
+        role=user.role,
+        access_token=token,
+    )
+
+
 @router.post("/workspaces", response_model=WorkspaceOut)
 def create_workspace(
     body: WorkspaceCreate,

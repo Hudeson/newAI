@@ -31,12 +31,13 @@
 - [x] personal 本地账号（注册/登录/JWT）
 - [x] Tenant / Workspace / RBAC 最小集（admin 建空间）
 - [x] 预签名上传（本地对象存储适配器，E2） → 对象存储（MinIO/S3 或本地适配器）
-- [ ] Parse / Embed Worker + 队列
-- [ ] PostgreSQL Schema（全表 `tenant_id`）— 基线已有，上传表待加
-- [ ] Qdrant payload 强制租户/空间/文档字段
-- [ ] 文档 ACL 最小实现
-- [ ] **验收**：双租户隔离测试通过（上传/检索）
-- [ ] **M1 整体 review + 全量回归**
+- [x] Parse / Embed Worker + 队列（personal 同步入库；worker 可认领 queued）
+- [x] PostgreSQL/SQLite Schema（documents/versions/jobs/chunks/acls，全表 `tenant_id`）
+- [x] 向量载荷强制租户字段（本地 `chunks.embedding_json` stub；Qdrant 后续替换）
+- [x] 文档 ACL 最小实现（owner + workspace + replace API）
+- [x] **验收**：双租户隔离测试通过（上传/检索）— `tests/test_e4_search_acl.py`
+- [x] **E3 review + 回归** [`milestones/E3-review.md`](./milestones/E3-review.md)
+- [x] **E4 / M1 review + 全量回归** [`milestones/E4-review.md`](./milestones/E4-review.md)
 
 ## M2 学习总结 + 安全问答
 
