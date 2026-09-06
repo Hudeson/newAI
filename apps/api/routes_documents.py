@@ -39,6 +39,45 @@ class AclOut(BaseModel):
     entries: list[AclEntry]
 
 
+@router.get("/documents", response_model=list[DocumentOut])
+def list_documents(
+    workspace_id: str | None = None,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> list[DocumentOut]:
+    q = select(Document).where(Document.tenant_id == auth.tenant_id)
+    if workspace_id:
+        q = q.where(Document.workspace_id == workspace_id)
+    rows = db.scalars(q.order_by(Document.created_at.desc())).all()
+    out: list[DocumentOut] = []
+    for doc in rows:
+        if not can_read_document(
+            db, tenant_id=auth.tenant_id, user_id=auth.user_id, document_id=doc.id
+        ):
+            continue
+        chunk_count = len(
+            db.scalars(
+                select(Chunk.id).where(
+                    Chunk.tenant_id == auth.tenant_id,
+                    Chunk.document_id == doc.id,
+                    Chunk.status == "active",
+                )
+            ).all()
+        )
+        out.append(
+            DocumentOut(
+                id=doc.id,
+                tenant_id=doc.tenant_id,
+                workspace_id=doc.workspace_id,
+                title=doc.title,
+                status=doc.status,
+                created_by=doc.created_by,
+                chunk_count=chunk_count,
+            )
+        )
+    return out
+
+
 @router.get("/documents/{document_id}", response_model=DocumentOut)
 def get_document(
     document_id: str,

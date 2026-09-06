@@ -14,39 +14,28 @@ ACL-aware RAG, and auditable tool-using agents. `personal` / `team` /
 
 ## Current milestone
 
-**E0 — scaffold** (in progress → gate with review + regression)
+**E6 — Frontend** (login / upload / learn / ask / members)
 
-## Quick start (E0)
+## Quick start
 
 ```bash
 python3 -m pip install -e ".[dev]"
 cp .env.example .env
 mkdir -p data
-make test          # regression
+make test          # API regression (E0–E6)
 make run-api       # http://127.0.0.1:8000/healthz
+
+cd apps/web && cp .env.example .env.local && npm install && npm run dev
+# Web UI: http://127.0.0.1:3000
 ```
-
-Optional dependencies (when Docker is available):
-
-```bash
-docker compose -f deploy/compose/docker-compose.yml up -d
-# then set DATABASE_URL / REDIS_URL / QDRANT_URL / S3_ENDPOINT in .env
-```
-
-## Milestone gate policy
-
-Each `E*` / `M*` exit requires:
-
-1. Checklist review against exit criteria
-2. Full regression of tests up to that milestone
-3. Short review note under `docs/milestones/`
 
 ## Layout
 
 ```
 apps/api          FastAPI
-apps/workers      async workers (stub in E0)
-packages/shared   config, db, errors, logging
+apps/workers      ingest / learn workers
+apps/web          Next.js UI (E6)
+packages/shared   config, db, acl, search, learn, ask
 deploy/compose    Postgres / Redis / Qdrant / MinIO
 docs/             architecture & plans
 tests/            automated tests
