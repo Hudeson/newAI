@@ -10,11 +10,12 @@
 - [x] API 契约草案 [`api-contracts.md`](./api-contracts.md)
 - [x] 数据模型 / 状态机草案 [`data-model.md`](./data-model.md)
 - [x] 明确：ACL↔向量一致性、文档版本、切块/超长学习、幂等去重、embedding 版本
+- [x] （P1）[`ops-slo-dr.md`](./ops-slo-dr.md) 配额 / SLO / DR / Runbook
 - [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model 签字）
 - [ ] 仓库骨架 + `personal` / `team` / `enterprise` profile
 - [ ] 错误码、request_id、审计事件字典（与 api-contracts 对齐落地）
 - [ ] Compose（dev）与 Helm 草案
-- [ ] （P1）`ops-slo-dr.md`、`connectors-and-scim.md`
+- [ ] （P1）`connectors-and-scim.md`
 
 ## M1 身份、空间、上传入库
 
