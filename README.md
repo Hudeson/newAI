@@ -1,34 +1,39 @@
-# newAI — 个人知识库 Agent
+# newAI — 企业级知识库 Agent
 
-在本仓库搭建**个人知识库 Agent**：
+按**企业级架构**设计的知识库 Agent 平台：多租户、权限可控 RAG、文档上传、自动学习总结、可审计 Agent。
 
-**上传文档 → 自动学习总结 → 检索增强问答 → Agent 整理与复习**
+个人/小团队通过 `profile=personal|team` 收缩部署，与企业版共用同一领域模型。
 
 ## 文档
 
-- 详细设计与计划：[`docs/personal-knowledge-base-agent.md`](./docs/personal-knowledge-base-agent.md)
-- 实施勾选清单：[`docs/checklist.md`](./docs/checklist.md)
+- 架构与计划：[`docs/personal-knowledge-base-agent.md`](./docs/personal-knowledge-base-agent.md)
+- 实施清单：[`docs/checklist.md`](./docs/checklist.md)
 
-重点能力（P0）：
+## 能力总览
 
-1. **文档上传**：Web/API 拖拽多文件（md/txt/pdf/docx），进度可追踪
-2. **自我学习总结**：入库后自动生成摘要、大纲、要点、标签与相关笔记
-3. **带引用问答**：基于原文 chunk + 知识卡片检索作答
-4. **复习总结 Agent**：按主题/时间批量对照总结
+| 能力 | 说明 |
+|------|------|
+| 多租户 | `tenant_id` + Workspace；向量检索强制 ACL filter |
+| 上传入库 | 预签名上传 → 异步解析/向量化 |
+| 自我学习 | 摘要/大纲/要点/标签；可自动发布或审批 |
+| 安全问答 | 权限内混合检索 + 引用校验 |
+| 治理 | SSO、配额、审计、LLM 路由、敏感级 |
+
+## 默认技术栈（企业）
+
+| 层 | 选型 |
+|----|------|
+| 前端 | Next.js |
+| API | FastAPI |
+| 元数据 | PostgreSQL |
+| 对象存储 | S3 兼容（MinIO/OSS/S3） |
+| 向量 | Qdrant |
+| 队列/缓存 | Redis（或 NATS） |
+| 认证 | OIDC（Keycloak / 企业 IdP） |
 
 ## 当前状态
 
-- **M0（设计）**：已覆盖上传与学习总结方案
-- **M1+（实现）**：待启动
+- **M0**：企业级设计已就绪
+- **M1+**：待实现（身份与隔离竖切优先）
 
-## 默认技术建议
-
-| 项 | 默认 |
-|----|------|
-| 语言 | Python 3.11+ |
-| 向量库 | Qdrant（本地 Docker） |
-| MVP UI | Streamlit（含上传区）→ 再迁 Next.js |
-| LLM | OpenAI 兼容云端 API + 预留 Ollama |
-| 学习时机 | 上传索引完成后自动学习（可关） |
-
-确认决策后，优先打通竖切：**上传 1 个文件 → 学习报告 → 带引用回答**。
+下一步建议竖切：**租户 A 上传 → 学习 → 问答；租户 B 不可见**。

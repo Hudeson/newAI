@@ -1,754 +1,577 @@
-# 个人知识库 Agent — 详细设计文档与实施计划
+# 企业级知识库 Agent — 架构设计与实施计划
 
-> 目标：搭建一个**可长期演进**的个人知识库 Agent，支持**上传文档**、自动**学习总结**，再基于私有资料检索问答、整理笔记、主动发现关联。
+> 定位：按**企业级架构**设计的知识库 Agent 平台。个人使用视为「单租户部署配置」，与多租户企业版共用同一套领域模型与服务边界，避免后期推倒重来。
 
 ---
 
-## 1. 项目愿景
+## 1. 设计原则
+
+| 原则 | 含义 |
+|------|------|
+| 租户优先 | 所有业务数据、向量、对象、任务、审计必带 `tenant_id` |
+| 零信任 API | 每个请求经认证 → 鉴权 → 范围过滤；禁止「先检索后过滤」漏权 |
+| 存算分离 | 原文对象存储、元数据库、向量库、任务队列独立扩展 |
+| 异步默认 | 上传、解析、embedding、学习总结一律进队列，API 只受理与查询 |
+| 证据可审计 | 问答与学习产物可回溯 chunk / 文档 / 操作者 / 模型版本 |
+| 配置分环境 | `personal` / `team` / `enterprise` profile，代码路径同一套 |
+| 可替换供应商 | LLM / Embedding / 对象存储 / IdP 通过 Provider 接口替换 |
 
 ### 1.1 一句话定义
 
-**个人知识库 Agent** = 文档上传与摄入 + 自我学习总结 + 私有 RAG 问答 + 工具化 Agent。
+**企业级知识库 Agent** = 多租户文档平台 + 权限可控的 RAG + 自动学习总结 + 可审计 Agent 工具编排。
 
-它不是普通 ChatGPT 对话框，而是：
+核心能力（P0）：
 
-- **上传即入库**：Web/API 上传 PDF、Word、Markdown、TXT 等，异步解析索引
-- **上传即学习**：入库后自动生成摘要、大纲、关键要点、标签与关联笔记
-- 只基于**你自己的资料**作答，并标明出处
-- 能**持续自我迭代**：新文档与旧知识对照，提炼增量洞察、知识卡片
-- 可本地或私有部署，数据主权归你
+1. **文档上传与摄入**（多格式、异步、可重试）
+2. **自我学习总结**（摘要/大纲/要点/标签/知识卡片；可审批）
+3. **带引用问答**（租户与 ACL 范围内检索）
+4. **组织级治理**（空间/角色/配额/审计/SSO）
 
-### 1.2 成功标准（Definition of Done）
+### 1.2 成功标准
 
 | 维度 | 达标表现 |
 |------|----------|
-| 上传 | Web 拖拽/多文件上传；进度可见；失败可重试；支持 md/txt/pdf/docx |
-| 学习总结 | 每篇入库后自动产出：摘要、大纲、要点列表、建议标签；可人工修订 |
-| 摄入 | 上传 + 目录同步 + URL；增量更新无明显重复 |
-| 检索 | 问答返回相关原文片段 + 来源路径；Top-K 命中率主观可用 |
-| 对话 | 多轮追问不丢上下文；可要求「只根据某文件夹/某次上传回答」 |
-| Agent | 至少含：搜索、单篇总结、批量复习总结、对比、打标签 |
-| 可维护 | 一键启动；配置与密钥外置；日志可排查上传/学习/检索失败 |
-| 隐私 | 默认本地向量库；云端 LLM 可选，敏感库可切本地模型 |
+| 多租户 | 租户间数据物理/逻辑隔离验证通过；跨租户检索必定为空 |
+| 权限 | 文档级 ACL + 角色；越权读写/问答被拒绝并记审计 |
+| 上传 | 多文件上传、进度、病毒扫描钩子、失败重试 |
+| 学习 | 自动学习报告；企业模式可走「生成 → 审批 → 发布」 |
+| 问答 | 引用可点回原文；无权限文档永不出现在证据中 |
+| 扩展 | 无状态 API 水平扩展；Worker 按队列积压扩容 |
+| 安全 | SSO、密钥托管、静态加密、完整审计导出 |
+| 可观测 | 追踪上传→学习→问答全链路；核心 SLO 可告警 |
 
-### 1.3 非目标（本期不做）
+### 1.3 明确非目标（首期仍不做）
 
-- 不做企业级多租户 / 权限系统
-- 不做完整 Notion 替代编辑器
-- 不做自动爬取全网（仅用户主动导入的来源）
-- 不做端侧 App（先 Web + CLI）
+- 不做完整协作编辑器（非 Notion 替代）
+- 不做公网开放注册的 C 端 SaaS 增长体系（可先私有化/专有云）
+- 不做自动全网爬取（仅授权来源）
 
 ---
 
-## 2. 用户场景与核心用例
+## 2. 角色、空间与用例
 
-### 2.1 典型人物
+### 2.1 组织模型
 
-| 角色 | 诉求 |
+```
+Tenant（租户/公司）
+  └── Workspace（空间：部门/项目/知识域）
+        └── Document / Collection
+              └── ACL（用户/用户组/角色）
+```
+
+| 角色 | 能力 |
 |------|------|
-| 个人学习者 | 「把我半年读过的文章串起来，回答这个问题」 |
-| 独立开发者 | 「根据我的技术笔记解释这段架构为什么这么设计」 |
-| 研究者 / 写作者 | 「找出所有提到 X 概念的笔记并生成对比表」 |
+| Platform Admin | 平台运维、租户开闭、全局配额 |
+| Tenant Admin | 成员、SSO 映射、空间、配额、审计导出 |
+| Workspace Admin | 空间成员、默认权限、连接器 |
+| Editor | 上传、编辑元数据、触发重学、确认学习报告 |
+| Viewer | 检索问答、查看已发布学习报告 |
+| Auditor | 只读审计日志与引用追溯 |
 
 ### 2.2 核心用例（P0）
 
-1. **上传文档**：Web 拖拽/多选上传（md/txt/pdf/docx）；显示解析与学习进度
-2. **自我学习总结（单篇）**：上传完成后自动生成摘要、大纲、关键要点、建议标签
-3. **自然语言问答**：提问 → 检索 → 带引用回答（优先结合已学习摘要 + 原文 chunk）
-4. **限定范围问答**：只查某次上传、某个主题、标签或文件夹
-5. **批量 / 主题复习总结**：对一批文档或某主题做对照总结与知识卡片
-6. **相关笔记推荐**：打开一篇时推荐「你可能还想看」
+1. SSO 登录进入租户与空间
+2. 上传文档 → 异步解析索引 →（可选）审批后对空间可见
+3. 自动学习总结；Editor 确认或走审批流后发布
+4. 空间内 / 跨有权空间的带引用问答
+5. 批量复习总结（限有权文档集）
+6. 管理员查看配额、任务失败、审计事件
 
 ### 2.3 进阶用例（P1）
 
-7. **增量学习**：新文档 vs 旧知识，输出「新增了什么 / 修正了什么 / 仍有矛盾」
-8. **知识整理 Agent**：合并重复笔记、生成主题地图、提醒知识缺口
-9. **定期回顾**：每日/每周「新学到的内容」摘要推送
-10. **写作助手**：基于知识库起草文章，并强制引用库内来源
-11. **多模态**：图片 OCR、音视频转写后入库并学习总结
+7. 增量学习 Insight（新 vs 旧，限同权范围）
+8. 企业连接器：SharePoint / Google Drive / Confluence / S3
+9. 敏感分级（L1–L4）与强制本地模型路由
+10. 部门知识周报、合规问答模板
+11. 多模态（OCR / 音视频转写）后入库学习
 
 ---
 
-## 3. 系统架构
-
-### 3.1 逻辑架构
+## 3. 逻辑架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        交互层                                │
-│  上传区 · 学习报告 · 对话 UI · CLI · API                      │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────┐
-│                     Agent 编排层                              │
-│  Planner / Tool Router · Memory · Citation Guard · Policies  │
-└───────┬─────────────────┬─────────────────┬─────────────────┘
-        │                 │                 │
-┌───────▼───────┐ ┌───────▼───────┐ ┌───────▼───────┐
-│  RAG 检索服务  │ │  学习总结引擎  │ │  LLM 推理服务  │
-│ hybrid search │ │ summary/card  │ │ local / cloud │
-└───────┬───────┘ └───────┬───────┘ └───────────────┘
-        │                 │
-┌───────▼─────────────────▼───────────────────────────────────┐
-│                       数据层                                  │
-│  上传对象存储 · 元数据 DB · 向量索引 · 学习产物 · 任务队列      │
-└─────────────────────────────────────────────────────────────┘
-                            ▲
-┌───────────────────────────┴─────────────────────────────────┐
-│                 上传 / 摄入 + 学习流水线                       │
-│  Upload → Parser → Chunker → Embedder → Indexer              │
-│                         └→ Learner（摘要/要点/标签/关联）      │
-└─────────────────────────────────────────────────────────────┘
+                    ┌──────────────────────────────────────┐
+                    │     Clients: Web / Admin / API SDK    │
+                    └──────────────────┬───────────────────┘
+                                       │
+                    ┌──────────────────▼───────────────────┐
+                    │  Edge: Ingress / WAF / API Gateway    │
+                    │  AuthN (OIDC) · Rate Limit · TLS      │
+                    └──────────────────┬───────────────────┘
+                                       │
+          ┌────────────────────────────┼────────────────────────────┐
+          │                            │                            │
+┌─────────▼─────────┐      ┌───────────▼──────────┐     ┌──────────▼─────────┐
+│  Gateway BFF/API  │      │  Identity & Access   │     │  Admin / Audit API │
+│  upload/query/chat│      │  IdP · RBAC · ACL    │     │  quota · export     │
+└─────────┬─────────┘      └──────────────────────┘     └────────────────────┘
+          │
+          │ 命令/查询
+          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Application Services                                 │
+│  Ingest Service · Learning Service · Retrieval/RAG · Agent Orchestrator     │
+└─────────┬───────────────────┬─────────────────────┬─────────────────────────┘
+          │                   │                     │
+          ▼                   ▼                     ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────┐
+│  Job Queue      │  │  LLM Gateway    │  │  Policy Engine      │
+│  parse/embed/   │  │  routing/budget │  │  ACL · DLP · model  │
+│  learn/notify   │  │  fallback       │  │  data residency     │
+└────────┬────────┘  └─────────────────┘  └─────────────────────┘
+         │
+         ▼ Workers (水平扩展)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Parse Worker · Embed Worker · Learn Worker · Notify Worker · GC Worker     │
+└─────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────┬──────────────┬──────────────┬──────────────┬─────────────────┐
+│ PostgreSQL   │ Object Store │ Vector DB    │ OpenSearch*  │ Redis           │
+│ 元数据/ACL/  │ 原文/导出    │ chunk/卡片   │ 关键词/日志* │ 会话/限流/队列  │
+│ 审计/任务    │ (S3 兼容)    │ (Qdrant)     │ 可选         │                 │
+└──────────────┴──────────────┴──────────────┴──────────────┴─────────────────┘
+
+* OpenSearch/Elasticsearch 可选；MVP 可用 Postgres FTS + 向量混合检索。
 ```
 
-### 3.2 关键数据流
+### 3.1 关键请求路径
 
-**上传摄入**
-
-```
-用户上传文件 → 校验类型/大小 → 落入 data/uploads/
-  → 创建 Source(status=pending) → 入队 ingest job
-  → Parser → Chunker → Embedding → 向量库 + 元数据
-  → Source(status=indexed) → 触发 learn job
-```
-
-**自我学习总结**
+**上传**
 
 ```
-Document indexed → Learner 读取全文/分章
-  → 生成 LearningArtifact：
-       summary（摘要） / outline（大纲） / key_points（要点）
-       / suggested_tags / related_doc_ids / open_questions
-  → 写入 DB；可选再向量化「知识卡片」便于日后检索
-  → UI 展示「学习报告」，用户可编辑确认
+Client → Gateway(AuthN)
+  → Ingest API 校验租户配额/MIME/大小
+  → 预签名或直传对象存储
+  → 写 UploadJob(tenant_id, workspace_id, status=uploaded)
+  → 投递 parse 队列 → embed →（策略允许则）learn
+  → 事件总线：DocumentIndexed / LearningReady
+  → （企业）发布审批流可选
 ```
 
-**增量学习（P1）**
+**问答（强制先鉴权过滤）**
 
 ```
-新文档学习完成 → 检索库内相似旧文档
-  → 对比：新增观点 / 冲突观点 / 可合并主题
-  → 生成 Insight 记录，供周回顾与 Agent 使用
+Client → Gateway(AuthN)
+  → 解析 AuthContext(tenant, user, roles, workspace scope)
+  → Policy：可得 document_id 集合（或 ACL filter 表达式）
+  → Hybrid Search(向量 ∩ ACL filter ∩ workspace filter)
+  → Rerank → Prompt(证据) → LLM Gateway
+  → 引用校验 → 审计 AnswerEvent → 流式返回
 ```
 
-**问答**
+**学习总结**
 
 ```
-用户问题 → （可选）查询改写 / HyDE
-  → 混合检索(原文 chunk + 学习卡片) → 重排序(Rerank)
-  → 组装 Prompt（问题 + 证据 + 已有摘要 + 引用约束）
-  → LLM 生成 → 校验引用 → 返回答案 + sources
+DocumentIndexed 事件
+  → Learn Worker 拉全文/分章（仍带 tenant）
+  → LLM Gateway（按敏感级选模型）
+  → 写 LearningArtifact(draft)
+  → 若 workspace 策略=auto_publish → published
+    否则等待 Editor 确认 / 审批
+  → 知识卡片向量化（仅 published 可被默认检索，可配置）
 ```
 
-**Agent 任务**
+---
 
-```
-用户意图 → Agent 选择工具序列
-  → upload_status / search_kb / learn_summarize / compare ...
-  → 聚合结果 → 最终回答
-```
+## 4. 部署与拓扑
 
-### 3.3 目录建议（实现阶段落地）
+### 4.1 环境 Profile
+
+| Profile | 适用 | 差异 |
+|---------|------|------|
+| `personal` | 单人本机 | 单租户固定 ID；OIDC 可换本地用户；MinIO/本地盘；单副本 |
+| `team` | 小团队 | 多空间；基础 RBAC；Docker Compose / 单 K8s ns |
+| `enterprise` | 企业 | SSO、多副本、KMS、审批、连接器、专有网络 |
+
+> 代码与 Schema 始终按 enterprise 模型；personal 只是配置收缩。
+
+### 4.2 推荐运行时（企业）
+
+- **编排**：Kubernetes
+- **入口**：Ingress + API Gateway（限流、JWT 校验）
+- **密钥**：云 KMS / Vault；禁止明文密钥进镜像
+- **网络**：LLM 出口可走企业代理；敏感租户可强制私有模型 VPC
+- **备份**：Postgres PITR；对象存储版本控制；向量库定期快照
+
+### 4.3 目录/服务边界（实现）
 
 ```
 /
-├── data/                    # 本地运行时数据（gitignore）
-│   ├── uploads/             # Web/API 上传原文件
-│   ├── raw/                 # 目录同步镜像或软链
-│   ├── processed/           # 解析后文本
-│   ├── learning/            # 学习产物（摘要/卡片 markdown 备份）
-│   └── indexes/             # 向量库持久化
-├── packages/
-│   ├── ingest/              # 解析、切块、embedding
-│   ├── learning/            # 自我学习总结引擎
-│   ├── retrieval/           # 检索、rerank、引用组装
-│   ├── agent/               # 工具定义与编排
-│   └── shared/              # 类型、配置、日志
 ├── apps/
-│   ├── api/                 # FastAPI：上传、学习、问答 API
-│   ├── web/                 # 上传区 + 学习报告 + 对话 UI
-│   └── cli/                 # 摄入、重建索引、运维命令
-├── docs/
-│   └── personal-knowledge-base-agent.md
-├── docker-compose.yml
-└── README.md
+│   ├── web/                 # Next.js（用户端）
+│   ├── admin/               # 管理端（可同 app 分路由）
+│   ├── api-gateway/         # BFF / 公共 API
+│   └── workers/             # 异步消费者
+├── services/                # 若模块化单体可先合仓分 package
+│   ├── identity/
+│   ├── ingest/
+│   ├── learning/
+│   ├── retrieval/
+│   ├── agent/
+│   ├── policy/
+│   └── audit/
+├── packages/
+│   ├── domain/              # 实体、ID、错误码
+│   ├── storage/             # S3/本地抽象
+│   ├── llm/                 # Provider 抽象
+│   └── observability/
+├── deploy/
+│   ├── compose/             # personal/team
+│   ├── helm/                # enterprise
+│   └── terraform/           # 可选基础设施
+├── data/                    # 仅 local profile
+└── docs/
 ```
-
-> 注：上表为逻辑分组；实现时可先扁平单包，再拆 packages。
 
 ---
 
-## 4. 技术选型建议
+## 5. 技术选型（企业默认）
 
-> 原则：**先跑通、可替换、隐私可控**。下列为推荐默认栈，括号内为可替换项。
+| 层级 | 企业默认 | 个人/团队简化 | 说明 |
+|------|----------|---------------|------|
+| 前端 | **Next.js** + 组件库 | 同左（可减管理台） | 上传、报告、对话、权限感知 |
+| API | FastAPI（Python）或 NestJS | FastAPI | RAG 生态优先 Python 时选 FastAPI |
+| 认证 | OIDC（Keycloak / 云 IdP） | 本地账号 / Auth.js | 企业必须 SSO |
+| 元数据库 | **PostgreSQL** | 同左（可单机） | 不再以 SQLite 为企业主路径 |
+| 对象存储 | **S3 兼容**（AWS S3 / MinIO / OSS） | MinIO 或本地适配器 | 上传直传 + 服务端处理 |
+| 向量库 | **Qdrant**（集群） | Qdrant 单机 | payload 必含 tenant/workspace/acl 字段 |
+| 关键词检索 | Postgres FTS 或 OpenSearch | Postgres FTS | 混合检索 |
+| 队列 | Redis Streams / NATS / RabbitMQ | Redis | 任务可重试、死信 |
+| 缓存 | Redis | Redis | 会话、限流、热点 ACL |
+| LLM 网关 | 自建路由 + 预算 | 直连兼容 API | 模型路由、降级、审计 |
+| 观测 | OpenTelemetry + Prometheus + Grafana + Loki | 结构化日志 | 企业要指标与追踪 |
+| LLM 追踪 | Langfuse / 自建 | 可选 | prompt/代价/质量 |
+| 前端上传 | 直传对象存储（预签名 URL） | 可经 API 中转 | 减网关带宽压力 |
 
-### 4.1 推荐默认栈（个人 / 单机优先）
-
-| 层级 | 推荐 | 备选 | 说明 |
-|------|------|------|------|
-| 语言 | Python 3.11+ | TypeScript | RAG/生态成熟，先 Python |
-| API | FastAPI | Hono / Nest | 异步友好，OpenAPI 自动生成 |
-| 前端 | Next.js + 简洁对话 UI | Streamlit（MVP） | MVP 可用 Streamlit 加速 |
-| 向量库 | Qdrant（本地 Docker） | Chroma / LanceDB / pgvector | Qdrant 过滤与混合检索强 |
-| 元数据 | SQLite → PostgreSQL | — | 先 SQLite，规模上来再迁 |
-| Embedding | `bge-m3` / `text-embedding-3` | nomic / voyage | 中英混合优先 bge-m3 |
-| Rerank | `bge-reranker-v2-m3` | Cohere Rerank | 显著提升准确率 |
-| LLM | 可配置：DeepSeek / OpenAI / Claude / Ollama | — | 通过统一 Provider 抽象 |
-| 编排 | LangGraph 或自研轻量 Agent | LlamaIndex Workflow | 工具少时自研更可控 |
-| 任务队列 | RQ / Celery / 进程内队列 | — | 摄入异步化 |
-| 观测 | structlog + 简单 dashboard | Langfuse | 追踪检索质量 |
-
-### 4.2 选型决策树
-
-```
-需要完全离线？
-  ├─ 是 → Ollama/本地 vLLM + 本地 embedding + Qdrant/LanceDB
-  └─ 否 → 云端 LLM +（本地或云端）embedding；原文仍建议本地存
-
-资料量级？
-  ├─ < 1万文档 / < 50万 chunk → SQLite + Qdrant 单机足够
-  └─ 更大 → Postgres + 独立向量服务 + 异步 worker
-
-中文为主？
-  └─ Embedding/Rerank 优先选中英双语模型（如 bge-m3 系列）
-```
-
-### 4.3 配置外置（示例）
+### 5.1 配置示例（企业）
 
 ```yaml
-# config.example.yaml
-llm:
-  provider: openai_compatible
-  base_url: ${LLM_BASE_URL}
-  api_key: ${LLM_API_KEY}
-  model: deepseek-chat
+profile: enterprise
 
-embedding:
-  provider: local  # or openai_compatible
-  model: BAAI/bge-m3
+tenancy:
+  mode: multi  # personal 时为 single + default_tenant_id
 
-vector_store:
+auth:
+  type: oidc
+  issuer: ${OIDC_ISSUER}
+  audience: kb-agent
+
+db:
+  postgres_url: ${DATABASE_URL}
+
+storage:
+  type: s3
+  bucket: kb-documents
+  kms_key_id: ${KMS_KEY_ID}
+
+vector:
   type: qdrant
-  url: http://localhost:6333
-  collection: personal_kb
+  url: ${QDRANT_URL}
+  collection: kb_chunks_v1
 
-ingest:
-  watch_dirs:
-    - ~/Notes
-  chunk_size: 800
-  chunk_overlap: 120
-  upload:
-    max_file_mb: 50
-    max_batch_files: 20
-    allowed_ext: [md, txt, pdf, docx, html]
+queue:
+  broker: redis://${REDIS_URL}
+
+llm_gateway:
+  routes:
+    - match: { sensitivity: [L1, L2] }
+      provider: openai_compatible
+      model: deepseek-chat
+    - match: { sensitivity: [L3, L4] }
+      provider: ollama_vpc
+      model: qwen2.5-72b
 
 learning:
-  auto_on_ingest: true          # 索引完成后自动学习总结
-  outputs: [summary, outline, key_points, tags, related]
-  write_knowledge_cards: true   # 将要点写成可检索知识卡片
-  incremental_compare: true     # 与旧文档做增量对照（P1）
+  auto_on_ingest: true
+  publish_mode: approval  # auto | approval
+  write_knowledge_cards: true
+
+quota:
+  max_storage_gb_per_tenant: 500
+  max_embed_pages_per_day: 100000
+  max_llm_tokens_per_day: 5000000
 ```
 
 ---
 
-## 5. 数据模型
+## 6. 数据架构
 
-### 5.1 核心实体
+### 6.1 核心表（均含租户）
 
-**UploadJob（上传任务）**
+**tenants / users / memberships / roles / workspaces / workspace_members**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| filename | string | 原始文件名 |
-| stored_path | string | `data/uploads/...` |
-| content_type | string | MIME |
-| size_bytes | int | |
-| status | enum | uploaded / ingesting / learning / ready / failed |
-| progress | float | 0–1，供 UI 进度条 |
-| error | text | 失败原因 |
-| source_id | uuid? | 关联 Source |
-| created_at | datetime | |
+标准组织与成员关系。
 
-**Source（来源）**
+**documents**
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| type | enum | upload / file / url / note / chat_export |
-| uri | string | 路径或 URL |
-| title | string | 标题 |
-| hash | string | 内容哈希，用于增量更新 |
-| mtime | datetime | 来源修改时间 |
-| status | enum | pending / indexed / learning / ready / failed |
-| meta | json | 作者、标签、自定义字段 |
-
-**Document（逻辑文档）**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| source_id | uuid | 外键 |
-| title | string | |
-| plain_text_path | string | 解析后文本位置 |
-| language | string | zh / en / mixed |
-| word_count | int | |
-| summary | text | 最新确认摘要（可来自学习产物） |
-| tags | string[] | |
-| learn_status | enum | none / pending / done / failed |
-
-**Chunk（检索单元）**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 / 向量点 ID |
-| document_id | uuid | |
-| ordinal | int | 块序号 |
-| content | text | 块文本 |
-| token_count | int | |
-| heading_path | string | 如 `架构/数据层` |
-| embedding | vector | 存向量库 |
-| sparse_vector | optional | 混合检索用 |
-
-**LearningArtifact（学习产物）**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | 主键 |
-| document_id | uuid | |
-| version | int | 同一文档可多次重学 |
-| summary | text | 一段话摘要 |
-| outline | json/text | 层级大纲 |
-| key_points | json | `[{point, evidence_chunk_ids}]` |
-| suggested_tags | string[] | |
-| open_questions | json | 文档未解答/待深入问题 |
-| related_doc_ids | uuid[] | 相似旧文档 |
-| card_ids | uuid[] | 生成的知识卡片 |
-| model | string | 所用 LLM |
-| created_at | datetime | |
-| confirmed | bool | 用户是否确认/修订过 |
-
-**KnowledgeCard（知识卡片，可选但推荐）**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | |
-| document_id | uuid | 来源文档 |
-| title | string | 概念/结论标题 |
-| body | text | 1–3 句可复用知识点 |
-| embedding | vector | 参与检索 |
-| tags | string[] | |
-
-**Insight（增量学习洞察，P1）**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | uuid | |
-| new_document_id | uuid | |
-| old_document_id | uuid | |
-| type | enum | addition / conflict / merge_candidate |
-| detail | text | 说明 |
-| evidence | json | 双方引用 |
-
-**Conversation / Message**
-
-标准多轮消息表，附带 `citations[]`（chunk_id + quote）。
-
-**AgentRun（可选）**
-
-记录工具调用轨迹，便于调试与评测。
-
-### 5.2 切块策略（关键）
-
-1. 优先按标题 / 段落语义切分，再按 token 上限二次切分
-2. `chunk_size` 建议 500–1000 tokens（中文按字近似亦可）
-3. `overlap` 10%–15%，避免答案跨块丢失
-4. 每个 chunk 附带：文件路径、标题路径、前后文指针
-5. 代码块、表格尽量整块保留，不强行切断
-
----
-
-## 6. 文档上传与自我学习总结（详细设计）
-
-### 6.1 上传能力
-
-**支持格式（MVP）**
-
-| 格式 | 处理方式 |
-|------|----------|
-| `.md` / `.txt` / `.markdown` | 直接解码文本 |
-| `.pdf` | 文本抽取（扫描件后续 OCR） |
-| `.docx` | 抽取段落与标题 |
-| `.html` | 正文抽取（可选） |
-
-**API 草图**
-
-```http
-POST /api/uploads                  # multipart 单文件或多文件
-GET  /api/uploads/{id}             # 状态：uploaded→ingesting→learning→ready
-GET  /api/uploads                  # 列表
-POST /api/uploads/{id}/retry       # 失败重试
-DELETE /api/uploads/{id}           # 删除上传及关联索引（需确认）
-
-GET  /api/documents/{id}/learning  # 获取学习报告
-POST /api/documents/{id}/relearn   # 强制重新学习总结
-PATCH /api/documents/{id}/learning # 用户修订摘要/标签并确认
-```
-
-**前端交互要点**
-
-1. 知识库页顶部：**拖拽上传区** + 文件选择；支持批量
-2. 列表展示每条：文件名、大小、状态徽章、进度条
-3. `ready` 后可一键打开「学习报告」或「基于此文档提问」
-4. 上传中可继续聊天；学习完成后轻提示「《xxx》已学完」
-
-**限制与安全**
-
-- 单文件大小上限（默认 50MB）、批量数量上限
-- 扩展名白名单；服务端再验 MIME/魔数
-- 文件名消毒；禁止路径穿越
-- 上传目录与处理目录隔离；病毒扫描可选（后期）
-
-### 6.2 自我学习总结引擎
-
-上传/摄入成功后自动执行（`learning.auto_on_ingest: true`），也可手动「重新学习」。
-
-**单篇学习输出（P0）**
-
-1. **摘要（Summary）**：200–400 字，说明文档在讲什么、对你可能有何用
-2. **大纲（Outline）**：按原文章节或逻辑重构的层级目录
-3. **关键要点（Key Points）**：5–12 条，每条尽量挂 `evidence_chunk_ids`
-4. **建议标签**：3–8 个，便于过滤检索
-5. **开放问题**：文档留下的疑问 / 值得继续查的点
-6. **相关已有笔记**：向量相似 Top-N，帮助建立关联
-
-**知识卡片（推荐默认开启）**
-
-- 从要点提炼为短卡片（标题 + 1–3 句）
-- 单独 embedding，问答时可与原文 chunk 混合召回
-- 好处：长文档「先命中卡片再下钻原文」，总结能力可被检索复用
-
-**批量 / 主题复习总结（P0/P1）**
-
-用户说「总结我这周上传的 AI 相关文档」时：
-
-```
-筛选文档集合 → 读取各 LearningArtifact
-  → 聚类主题 → 生成对照表 / 共识 / 分歧 / 行动项
-  → 产出复习报告（可导出 Markdown）
-```
-
-**增量学习（P1）**
-
-新文档学完后，自动与相似旧文档对比，写入 `Insight`：
-
-- addition：新补充了哪些观点
-- conflict：与旧笔记冲突之处（标出双方引用）
-- merge_candidate：建议合并的重复主题
-
-### 6.3 学习 Prompt 骨架
-
-```text
-你是用户的个人知识学习助手。请只依据给定文档内容产出结构化学习结果。
-输出 JSON，字段：summary, outline, key_points[], suggested_tags[], open_questions[]。
-key_points 每项包含 point 与 evidence_quotes（必须来自原文）。
-不要编造文档中不存在的事实；不确定则写入 open_questions。
-```
-
-### 6.4 失败与重试
-
-| 阶段 | 失败表现 | 处理 |
-|------|----------|------|
-| 上传 | 类型/大小不符 | 立即 4xx，不入队 |
-| 解析 | PDF 损坏等 | status=failed，可 retry |
-| 索引 | embedding 超时 | 指数退避重试 |
-| 学习 | LLM 超时/JSON 损坏 | 保留 indexed，learn_status=failed，可 relearn |
-
-原则：**索引成功与学习成功解耦**——即使总结失败，仍可检索原文。
-
----
-
-## 7. Agent 能力与产品界面
-
-### 7.1 工具清单
-
-| 工具名 | 作用 | 优先级 |
-|--------|------|--------|
-| `upload_document` | 触发/查询上传与处理状态 | P0 |
-| `search_knowledge` | 语义+关键词混合检索（含知识卡片） | P0 |
-| `get_document` | 按 ID/路径取全文或章节 | P0 |
-| `get_learning_report` | 获取单篇学习总结报告 | P0 |
-| `learn_summarize` | 对指定文档（重新）执行学习总结 | P0 |
-| `review_summarize` | 对一批文档/主题做复习总结 | P0 |
-| `list_sources` | 列出已索引来源与状态 | P0 |
-| `cite_answer` | 强制输出带引用的最终答案 | P0 |
-| `tag_documents` | 建议或写入标签 | P1 |
-| `compare_concepts` | 对比多篇笔记中的观点 | P1 |
-| `find_related` | 基于当前文档找相似笔记 | P1 |
-| `incremental_learn` | 新文档 vs 旧知识增量对照 | P1 |
-| `ingest_url` / `ingest_path` | 即时摄入新内容 | P1 |
-| `weekly_digest` | 生成时间窗口内新增知识摘要 | P2 |
-
-### 7.2 Agent 行为约束
-
-1. **证据优先**：无检索证据时明确说「知识库中未找到」，禁止编造出处
-2. **引用可点击**：每条关键结论对应 chunk / 文件路径
-3. **范围尊重**：用户指定文件夹/标签/某次上传时不得越界检索
-4. **最小权限**：默认只读；写入标签/确认学习报告需显式确认（可配置）
-5. **可审计**：保留本轮工具调用与命中 chunk 列表
-6. **学习可追溯**：总结中的要点尽量绑定原文证据
-
-### 7.3 对话提示词骨架
-
-```text
-你是用户的个人知识库助手，也能在用户上传文档后帮助学习总结。
-只能依据提供的【证据】与【学习报告】回答；证据不足时说明缺口。
-回答中用 [n] 标注引用，并在文末列出对应来源。
-优先结构化输出：结论 → 依据 → 延伸阅读建议。
-```
-
-### 7.4 页面结构（MVP）
-
-1. **上传与知识库页**（首页之一）：拖拽上传、进度列表、失败重试
-2. **学习报告页**：摘要 / 大纲 / 要点 / 标签 / 相关笔记；支持编辑确认
-3. **对话页**：流式回答 + 引用来源；可「基于当前文档提问」
-4. **文档页**：原文查看、相关推荐、手动标签
-5. **设置页**：模型、API Key、上传限制、监视目录、是否自动学习
-
-### 7.5 CLI
-
-```bash
-kb upload ./paper.pdf                 # 等价于 API 上传
-kb ingest ./notes --watch
-kb learn <doc_id>                     # 触发/重跑学习总结
-kb learn --since 7d                   # 复习总结最近文档
-kb reindex --full
-kb search "向量检索如何调优"
-kb status
-kb eval ./eval/questions.jsonl
-```
-
----
-
-## 8. 分阶段实施计划
-
-### 阶段 0 — 立项与基线（产出：本仓库骨架）
-
-**目标**：明确范围、目录、配置约定。
-
-**任务**
-
-- [x] 撰写本设计文档（含上传与自我学习总结）
-- [ ] 初始化项目骨架与依赖管理
-- [ ] 约定配置文件、环境变量、`.gitignore`（排除 `data/uploads` 等）
-- [ ] 选定 MVP 交互：`API + Web 上传区`（可用 Streamlit 加速）
-
-**验收**：本地能 `docker compose up` 拉起空服务健康检查。
-
----
-
-### 阶段 1 — 上传、摄入与索引（MVP 地基）
-
-**目标**：文档可上传；Markdown/TXT/PDF/DOCX 可解析、切块、入库。
-
-**任务**
-
-- [ ] `POST /api/uploads` 多文件上传 + 进度状态机
-- [ ] UploadJob / Source / Document 元数据表
-- [ ] Parser：md / txt / pdf / docx
-- [ ] Chunker + Embedding 写入 Qdrant
-- [ ] CLI：`upload` / `ingest` / `status` / `reindex`
-- [ ] 简易 Web 拖拽上传区
-
-**验收**
-
-- 浏览器上传 3 个不同格式文件，全部进入 `indexed`
-- 导入 50+ 篇中文笔记后状态正确；修改后增量更新
-
-**风险**：PDF 解析质量差 → 先支持文本型 PDF，扫描件后续再加 OCR。
-
----
-
-### 阶段 2 — 自我学习总结 + 检索问答
-
-**目标**：上传后自动出学习报告；同时可带引用问答。
-
-**任务**
-
-- [ ] LearningArtifact 生成流水线（摘要/大纲/要点/标签/相关）
-- [ ] 知识卡片写入与向量化
-- [ ] 学习报告 UI（查看 / 修订 / 确认）
-- [ ] 混合检索（原文 chunk + 知识卡片）+ Rerank
-- [ ] 流式问答 + 引用展示
-- [ ] 基础对话历史
-
-**验收**
-
-- 上传一篇长文后自动出现完整学习报告，要点可回溯原文
-- 20 条评测问 Recall@5 ≥ 0.7；引用可回溯真实 chunk
-
-**风险**：超长文档超上下文 → 分章学习再归并；JSON 损坏 → 校验重试。
-
----
-
-### 阶段 3 — Agent 化（工具编排）
-
-**目标**：从「单次 RAG / 单次总结」升级为可多步工具助手。
-
-**任务**
-
-- [ ] 实现 P0 工具集（含 upload/learn/review）
-- [ ] 编排循环与最大步数限制
-- [ ] 「总结这批上传」「对比 A 与 B」等复合任务
-- [ ] 写入类操作二次确认；AgentRun 轨迹落库
-
-**验收**
-
-- 「把我今天上传的文档做成复习总结」可自动完成
-- 无证据时拒绝编造
-
----
-
-### 阶段 4 — 体验与自动化
-
-**目标**：日常愿意持续用。
-
-**任务**
-
-- [ ] 目录 watch 自动同步
-- [ ] URL 摄入
-- [ ] 增量学习 Insight（新 vs 旧）
-- [ ] 周摘要 / 主题地图
-- [ ] 学习失败告警与一键 relearn
-
-**验收**：保存/上传后数十秒内可检索，并收到「已学完」提示。
-
----
-
-### 阶段 5 — 强化与个性化（可选）
-
-**任务**
-
-- [ ] 本地模型一键切换（Ollama）
-- [ ] 简单知识图谱
-- [ ] 多模态（OCR / 语音转写）后自动学习总结
-- [ ] Obsidian / Logseq 导入
-- [ ] 备份与导出（原文 + 学习报告 zip）
-
----
-
-## 9. 质量保障与评测
-
-### 9.1 自动化测试
-
-| 类型 | 覆盖 |
+| 字段 | 说明 |
 |------|------|
-| 单元 | chunker、上传校验、学习 JSON 解析、引用解析 |
-| 集成 | upload → ingest → learn → search → answer |
-| 回归 | 固定语料的 retrieval + 学习报告字段完整性 |
+| id, tenant_id, workspace_id | 归属 |
+| title, mime, checksum, size | 基础 |
+| object_key | 对象存储键 |
+| sensitivity | L1–L4 |
+| status | draft/processing/indexed/published/archived/failed |
+| created_by, updated_at | 审计 |
 
-### 9.2 人工评测集（建议持续维护）
+**document_acl**
 
-`eval/questions.jsonl` 与 `eval/learning_cases.jsonl`：
+| 字段 | 说明 |
+|------|------|
+| document_id, tenant_id | |
+| principal_type | user / group / role / workspace_all |
+| principal_id | |
+| permission | read / write / admin |
+
+**upload_jobs / ingest_tasks / learning_artifacts / knowledge_cards / insights**
+
+与个人版能力对应，但全部带 `tenant_id`、`workspace_id`；学习产物增加 `state: draft|approved|published|rejected`。
+
+**conversations / messages / answer_citations**
+
+会话与引用；引用只存有权访问时可见的 chunk 快照元数据。
+
+**audit_events**
+
+| 字段 | 说明 |
+|------|------|
+| id, tenant_id, actor_id | |
+| action | login/upload/search/answer/learn/export/delete... |
+| resource_type, resource_id | |
+| ip, user_agent, request_id | |
+| detail jsonb | 不含密钥；可含 token 用量 |
+| created_at | 只追加 |
+
+**usage_ledger**
+
+按租户计量：存储字节、embed tokens、llm tokens、任务次数 → 配额与账单。
+
+### 6.2 向量 Payload 强制字段
 
 ```json
-{"id":"q1","question":"...","must_include_paths":["notes/rag.md"],"notes":"应提到混合检索"}
-{"id":"l1","doc":"samples/long-article.md","must_have":["summary","outline","key_points"],"min_points":5}
+{
+  "tenant_id": "t_xxx",
+  "workspace_id": "w_xxx",
+  "document_id": "d_xxx",
+  "chunk_id": "c_xxx",
+  "acl_hash": "…",
+  "sensitivity": "L2",
+  "status": "published"
+}
 ```
 
-指标：
+检索过滤器示例：`tenant_id = ? AND workspace_id IN (?) AND status = published AND ...`  
+**禁止**拉取全库再在应用层丢弃无权限命中（防侧信道与泄漏）。
 
-- Retrieval：Recall@K、MRR
-- Learning：字段完整率、要点可回溯率、摘要忠实度（人工 1–5）
-- Generation：忠实度、引用正确率、可读性
+### 6.3 对象存储键规范
 
-### 9.3 观测清单
-
-- 上传任务：耗时分阶段（upload/parse/embed/learn）、失败原因
-- 每次回答：query、命中 chunk/卡片、rerank 分数、latency、token
-- 学习失败按 document 聚合告警
-
----
-
-## 10. 安全与隐私
-
-1. API Key 仅环境变量 / 本地 secret，不入库、不进 git
-2. 上传文件扩展名白名单 + 大小限制；文件名消毒
-3. 默认不把整库原文上传到第三方（学习时按章发送；问答仅发送检索片段）
-4. 可选「敏感集合」标记：强制走本地模型
-5. Web 若暴露到局域网，加简单 Token / Basic Auth
-6. 提供一键清除：删除上传文件 + 向量集合 + 元数据 + 学习产物
+```
+s3://{bucket}/{tenant_id}/{workspace_id}/{document_id}/raw/{filename}
+s3://{bucket}/{tenant_id}/{workspace_id}/{document_id}/derived/text.json
+s3://{bucket}/{tenant_id}/exports/{export_id}.zip
+```
 
 ---
 
-## 11. 成本与资源粗算（个人规模）
+## 7. 安全、合规与策略
 
-| 项目 | 量级假设 | 备注 |
-|------|----------|------|
-| 笔记 | 2,000 篇，平均 2k 字 | 约 4M 字 |
-| Chunk | ~15,000–25,000 | 视切块而定 |
-| 磁盘 | 上传原文 + 向量 + 学习产物 < 10–20 GB | 单机轻松 |
-| Embedding | 一次性本地或少量云端费用 | 增量后成本低 |
-| LLM | 对话 + **每篇自动学习** | 学习是主要增量成本；可对短文用小模型 |
-
----
-
-## 12. 里程碑总览
-
-| 里程碑 | 关键交付物 |
-|--------|------------|
-| M0 | 设计文档（含上传与自我学习） |
-| M1 | Web/API 上传 + 解析索引 |
-| M2 | 自动学习报告 + 带引用问答 |
-| M3 | Agent 工具编排（复习总结等） |
-| M4 | 自动同步 + 增量学习 + 周摘要 |
-| M5 | 本地模型 / 图谱 / 多模态（按需） |
+1. **认证**：企业 SSO（OIDC/SAML）；服务间 mTLS 或 JWT
+2. **授权**：RBAC（角色）+ 文档 ACL；Agent 工具调用前二次授权
+3. **DLP**：上传/提示词可过敏感信息规则（正则/分类器）；命中则脱敏或阻断
+4. **模型路由**：按 `sensitivity` 与租户策略选择云端或私有模型
+5. **加密**：对象存储 SSE-KMS；DB TDE/磁盘加密；传输 TLS1.2+
+6. **数据驻留**：租户级 region 绑定；禁止跨区向量复制（可配置）
+7. **删除权**：文档删除 → 队列表/向量/对象/学习产物/引用的级联或软删+GC
+8. **提示词注入防护**：工具白名单、输出 schema 校验、不可见系统策略与用户内容隔离
+9. **供应链**：镜像签名、依赖扫描、最小权限 IAM
 
 ---
 
-## 13. 近期行动清单（建议立刻执行）
+## 8. 前端（企业）
 
-1. **确认约束**：主要上传格式？是否必须离线？Python 还是 TS？
-2. **准备语料**：30–100 篇真实文档作黄金测试集（含至少 5 篇长文测学习总结）
-3. **搭骨架**：docker-compose（Qdrant）+ FastAPI 上传接口 + 配置加载
-4. **打通竖切**：上传 1 个 Markdown → 索引 → 自动学习报告 → 一句带引用回答
-5. **再扩面**：PDF/DOCX、批量上传、复习总结、Agent 工具
+### 8.1 应用结构
+
+| 模块 | 功能 |
+|------|------|
+| 登录 / SSO 回调 | OIDC |
+| 空间切换器 | 租户内多 Workspace |
+| 知识库 | 上传、列表、状态、ACL 管理入口 |
+| 学习报告 | 草稿/已发布、审批、修订 |
+| 对话 | 流式回答、引用抽屉、范围选择器 |
+| 管理台 | 成员、角色、配额、连接器、审计导出 |
+| 设置 | 模型策略、自动学习开关、发布模式 |
+
+### 8.2 UX 硬性要求
+
+- 任何列表/搜索结果必须已是权限过滤后的视图
+- 上传展示分阶段进度：上传 → 扫描 → 解析 → 索引 → 学习 → 发布
+- 无权限资源统一 404（防存在性探测），审计记 403 详情仅管理员可见
 
 ---
 
-## 14. 开放决策（需你拍板）
+## 9. Agent 与工具治理
+
+| 工具 | 说明 | 权限 |
+|------|------|------|
+| `search_knowledge` | ACL 内混合检索 | Viewer+ |
+| `get_document` | 取有权文档 | Viewer+ |
+| `get_learning_report` | 已发布报告；草稿需 Editor | 视状态 |
+| `learn_summarize` | 触发重学 | Editor+ |
+| `review_summarize` | 批量复习 | Viewer+（只读产出） |
+| `upload_document` | 创建上传意图 | Editor+ |
+| `manage_acl` | 改权限 | Workspace Admin |
+| `export_audit` | 导出审计 | Auditor/Admin |
+
+约束：
+
+- 最大工具步数、最大跨文档数、最大导出量
+- 高危工具（删库、改 ACL、导出）需 step-up 确认或管理员角色
+- 每次工具调用写入 `agent_runs` + `audit_events`
+
+---
+
+## 10. 可观测性与 SLO
+
+| SLO | 目标（示例） |
+|-----|--------------|
+| API 可用性 | 99.9% |
+| 上传受理延迟 | P99 < 2s（不含大文件传输） |
+| 入库完成（≤20MB 文本 PDF） | P95 < 5 min |
+| 问答首 token | P95 < 3s（不含冷启动） |
+| 跨租户泄漏事件 | **0** |
+
+指标：队列积压、Worker 失败率、embedding/LLM 错误与费用、检索空结果率、引用校验失败率。
+
+---
+
+## 11. 分阶段实施（企业模型从 Day 1）
+
+### M0 — 架构基线
+
+- [x] 企业级架构文档
+- [ ] 领域模型与 `tenant_id` 规范冻结
+- [ ] 仓库骨架、Helm/Compose、配置 profile
+- [ ] 错误码、request_id、审计事件字典
+
+### M1 — 身份、空间、上传入库
+
+- [ ] OIDC 登录（personal 可用本地 IdP）
+- [ ] Tenant/Workspace/RBAC 最小集
+- [ ] 预签名上传 + Parse/Embed Worker
+- [ ] Postgres + S3 + Qdrant（payload 带租户字段）
+- [ ] 文档 ACL 最小实现（workspace_all / owner）
+
+**验收**：两租户同名文档互不可见；越权问答返回空/拒绝。
+
+### M2 — 学习总结 + 安全问答
+
+- [ ] Learning Worker + draft/publish
+- [ ] 知识卡片向量化
+- [ ] ACL 过滤混合检索 + 引用
+- [ ] LLM Gateway 初版（路由/计量）
+- [ ] Next.js：上传、报告、对话
+
+**验收**：学习报告审批流可关可开；引用不出权。
+
+### M3 — Agent 编排与治理
+
+- [ ] 工具白名单 + 鉴权
+- [ ] 复习总结 / 对比等复合任务
+- [ ] 配额与 usage_ledger
+- [ ] 管理台：成员、配额、失败任务
+
+### M4 — 企业加固
+
+- [ ] 审批流、敏感分级、私有模型路由
+- [ ] 连接器（至少 1 个企业网盘）
+- [ ] OpenSearch（如需要）、审计导出、备份演练
+- [ ] 渗透与租户隔离测试报告
+
+### M5 — 规模与智能增强
+
+- [ ] 多区域 / 只读副本
+- [ ] 知识图谱、多模态
+- [ ] 质量评测门禁接入 CI
+- [ ] 成本优化（小模型摘要、缓存、批处理）
+
+---
+
+## 12. 从个人版平滑到企业版
+
+| 能力 | 做法 |
+|------|------|
+| 单人使用 | `profile=personal`，`tenant_id=default`，隐藏空间切换 |
+| 升级团队 | 启用多 workspace + 邀请成员 |
+| 升级企业 | 接 SSO、KMS、审批、配额、连接器 |
+| 数据迁移 | 对象键与向量 payload 已含租户，迁移主要是 IdP 与密钥 |
+
+**禁止路径**：先做无租户 SQLite 个人版，再「加租户字段」——成本远高于 Day 1 就带 `tenant_id`。
+
+---
+
+## 13. 质量保障
+
+| 类型 | 内容 |
+|------|------|
+| 单元 | ACL 判定、过滤器构造、学习 JSON schema |
+| 集成 | 双租户隔离、上传→学习→问答 |
+| 安全 | 越权用例集、提示词注入、导出边界 |
+| 性能 | 检索 P95、队列积压下的背压 |
+| 评测 | 学习忠实度、Recall@K、引用正确率 |
+
+---
+
+## 14. 风险与对策
+
+| 风险 | 对策 |
+|------|------|
+| 权限漏过滤导致串租 | 向量侧强制 filter；集成测试红线；代码审查清单 |
+| LLM 成本失控 | 配额、路由小模型、缓存学习产物、异步限流 |
+| 大文件/坏 PDF 拖垮 Worker | 超时、隔离队列、熔断、毒消息进 DLQ |
+| 审批降低体验 | 空间级策略：个人空间 auto，合规空间 approval |
+| 供应商锁定 | Provider 接口 + 评价集回归 |
+
+---
+
+## 15. 近期行动清单
+
+1. 冻结组织模型：Tenant / Workspace / ACL
+2. 选定 IdP 与对象存储（开发用 Keycloak + MinIO 即可）
+3. 落地 Postgres schema（全表 `tenant_id`）
+4. 竖切：**租户 A 上传 → 学习 → 问答**；租户 B 不可见
+5. 再补审批、配额、连接器与管理台
+
+---
+
+## 16. 开放决策
 
 | 决策项 | 选项 | 默认建议 |
 |--------|------|----------|
-| 主语言 | Python / TypeScript | **Python** |
-| MVP UI | Streamlit / Next.js | **先 Streamlit（含上传区），后 Next** |
-| LLM | 云端兼容 API / 纯本地 | **云端可配 + 预留 Ollama** |
-| 学习时机 | 上传后自动 / 仅手动 | **自动学习（可关）** |
-| 知识卡片 | 开启 / 关闭 | **开启**（利于检索复用总结） |
-| 笔记来源 | 上传为主 / 文件夹监视 / 混合 | **上传 + 本地文件夹** |
-| 部署形态 | 仅本机 / 家里 NAS / 云主机 | **本机 Docker** |
+| API 语言 | Python FastAPI / Node Nest | **Python FastAPI**（RAG 生态） |
+| 前端 | Next.js | **Next.js**（企业默认，不再以 Streamlit 为主） |
+| 多租户模式 | 库隔离 / Schema 隔离 / 行级隔离 | **行级隔离 + 向量 payload 过滤**（起步）；高安全租户可独立 collection |
+| 发布策略 | 自动 / 审批 | **空间可配置，默认 auto，合规空间 approval** |
+| 向量 | Qdrant / pgvector | **Qdrant** |
+| 队列 | Redis / NATS / RabbitMQ | **Redis Streams 或 NATS** |
+| 首发形态 | 私有化 / 专有云 / 多租户 SaaS | **先私有化/专有云，模型预留 SaaS** |
 
 ---
 
-## 15. 附录：术语表
+## 17. 术语
 
 | 术语 | 含义 |
 |------|------|
-| RAG | Retrieval-Augmented Generation，检索增强生成 |
-| UploadJob | 一次文档上传及其处理状态机 |
-| LearningArtifact | 对单篇文档的自动学习产物（摘要/大纲/要点等） |
-| KnowledgeCard | 从要点提炼的可检索短知识单元 |
-| Insight | 新文档相对旧知识的增量对照结论 |
-| Chunk | 检索与引用的最小文本单元 |
-| Embedding | 文本向量表示 |
-| Hybrid Search | 向量检索 + 关键词检索融合 |
-| Rerank | 对初检结果二次精排 |
-| Agent | 可规划并调用工具完成任务的 LLM 系统 |
-| Citation | 答案中可回溯的来源引用 |
+| Tenant | 租户，最顶层隔离单位 |
+| Workspace | 租户内空间/知识域 |
+| ACL | 文档访问控制列表 |
+| LLM Gateway | 模型路由、预算、审计入口 |
+| LearningArtifact | 学习总结产物（可草稿/发布） |
+| KnowledgeCard | 可检索知识卡片 |
+| Profile | personal/team/enterprise 部署配置 |
 
 ---
 
-## 16. 文档维护
+## 18. 文档维护
 
-- 本文档随实现同步更新「阶段勾选」与选型变更
-- 重大架构变更请在 PR 中说明对本文第 3/4/6/8 节的影响
+- 企业架构变更需同步更新第 3/5/6/7/11 节
+- 个人版体验变更不得破坏 `tenant_id` 与 ACL 不变量
