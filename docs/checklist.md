@@ -6,6 +6,7 @@
 
 - [x] 企业级架构与实施计划
 - [x] **完整技术架构总览** [`technical-architecture.md`](./technical-architecture.md)
+- [x] **执行计划** [`execution-plan.md`](./execution-plan.md)
 - [x] 明确：上传、自我学习总结、多租户/ACL 为 Day 1 约束
 - [x] 设计审阅遗漏清单（主文档 §18）
 - [x] API 契约草案 [`api-contracts.md`](./api-contracts.md)
