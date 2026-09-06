@@ -10,6 +10,7 @@
 - 数据模型 / 状态机：[`docs/data-model.md`](./docs/data-model.md)
 - API 契约草案：[`docs/api-contracts.md`](./docs/api-contracts.md)
 - 运维 / SLO / 灾备：[`docs/ops-slo-dr.md`](./docs/ops-slo-dr.md)
+- 连接器与 SCIM：[`docs/connectors-and-scim.md`](./docs/connectors-and-scim.md)
 - 实施清单：[`docs/checklist.md`](./docs/checklist.md)
 - 企业 vs 个人对照：[`docs/enterprise-vs-personal.md`](./docs/enterprise-vs-personal.md)
 

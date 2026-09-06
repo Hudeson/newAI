@@ -490,5 +490,6 @@ data: {"message_id":"m_...","usage":{"llm_tokens":1234}}
 - [x] search 强制租户与 ACL
 - [x] audit/usage 管理接口
 - [x] outbox 事件类型
-- [ ] SCIM 用户同步 API（P1）
-- [ ] 连接器 API（P1）
+- [x] SCIM 用户同步 API（P1）→ 见 [`connectors-and-scim.md`](./connectors-and-scim.md) §3、§8
+- [x] 连接器 API（P1）→ 见 `connectors-and-scim.md` §8
+- [ ] Webhooks 投递保证与重试细则（实现阶段）

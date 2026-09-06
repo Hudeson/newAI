@@ -607,17 +607,17 @@ s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 
 | # | 遗漏项 | 状态 | 说明 / 落点 |
 |---|--------|------|-------------|
-| 9 | **用户组 / SCIM** | 待补 | ACL 有 `group` principal，但缺 Group 实体与企业目录同步（SCIM） |
-| 10 | **服务账号与 API Key** | 待补 | 企业集成、连接器、CI 需要非人身份 |
+| 9 | **用户组 / SCIM** | 已补 | [`connectors-and-scim.md`](./connectors-and-scim.md) §2.1、§3 |
+| 10 | **服务账号与 API Key** | 已补 | `connectors-and-scim.md` §2.2、§8 |
 | 11 | **通知渠道** | 待补 | 学习完成/审批待办/任务失败：站内信、邮件、Webhook/Slack 未设计 |
 | 12 | **会话与记忆策略** | 待补 | 对话保留多久、可否跨会话记忆、敏感会话加密与清理 |
 | 13 | **引用深链** | 待补 | 点回 PDF 页码/段落锚点；仅有 chunk 不够产品化 |
 | 14 | **反馈闭环** | 待补 | 点赞/点踩、错误引用举报 → 进入评测集与重排特征 |
 | 15 | **配额细化** | 已补 | [`ops-slo-dr.md`](./ops-slo-dr.md) §3 |
 | 16 | **审批流引擎边界** | 待补 | 「approval」是内置简单状态机还是对接企业 BPM（飞书/钉钉/ServiceNow） |
-| 17 | **连接器同步模型** | 待补 | 增量游标、冲突（远端删除）、权限映射、同步背压 |
+| 17 | **连接器同步模型** | 已补 | `connectors-and-scim.md` §4–§7 |
 | 18 | **多语言 / i18n** | 待补 | UI 与分词/嵌入对中英混合外的语言策略 |
-| 19 | **Feature Flag** | 待补 | 按租户灰度：自动学习、Agent、连接器 |
+| 19 | **Feature Flag** | 部分 | 连接器灰度见 `connectors-and-scim.md` §12；全局 FF 仍待专文 |
 
 ### 18.3 P2 — 企业加固期应补
 
@@ -649,7 +649,8 @@ s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 1. [x] `docs/api-contracts.md`
 2. [x] `docs/data-model.md` + 主文档 §6.4 摘要
 3. [x] `docs/ops-slo-dr.md`（配额细则、RPO/RTO、Runbook 大纲）
-4. [ ] M3 前 `docs/connectors-and-scim.md`
+4. [x] `docs/connectors-and-scim.md`（SCIM、服务账号、连接器同步）
+5. [ ] （可选）通知 / 会话记忆 / 审批 BPM 专文
 
 ---
 

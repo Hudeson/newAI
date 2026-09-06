@@ -76,7 +76,7 @@ ID 策略：应用层 UUID/ULID（字符串）；对外 API 不暴露自增整�
 ### groups / group_members
 
 企业目录组；ACL `principal_type=group` 指向 `groups.id`。  
-后续 SCIM 写入本组。
+后续 SCIM 写入本组。详见 [`connectors-and-scim.md`](./connectors-and-scim.md)。
 
 ### api_keys
 

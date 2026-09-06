@@ -397,4 +397,4 @@ OpenTelemetry：`upload.complete` → `parse` → `embed` → `learn` → `searc
 | Runbook | §9 |
 | 可观测/告警 | §5–§6 |
 
-仍属其它文档：SCIM/连接器 → `connectors-and-scim.md`；法务 DPA → 商务/合规册。
+仍属其它文档：法务 DPA → 商务/合规册。连接器与 SCIM → [`connectors-and-scim.md`](./connectors-and-scim.md)。
