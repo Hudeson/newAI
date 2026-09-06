@@ -41,13 +41,14 @@
 
 ## M2 学习总结 + 安全问答
 
-- [ ] Learning Worker（摘要/大纲/要点/标签）
-- [ ] LearningArtifact：draft / approved / published
-- [ ] 知识卡片向量化
-- [ ] ACL 过滤混合检索 + 引用校验
-- [ ] LLM Gateway（路由/计量）
-- [ ] Next.js：上传、学习报告、对话
-- [ ] 评测：隔离 + Recall + 学习字段完整率
+- [x] Learning Worker（摘要/大纲/要点；本地 extractive，E5）
+- [x] LearningReport：draft / published（personal `publish_mode=auto`）
+- [ ] 知识卡片向量化（E5 后延，当前复用 chunk 向量）
+- [x] ACL 过滤检索 + Ask 引用二次校验
+- [x] LLM Gateway 初版（local provider + `usage_ledger`）
+- [ ] Next.js：上传、学习报告、对话（E6）
+- [x] **E5 review + 全量回归** [`milestones/E5-review.md`](./milestones/E5-review.md)
+- [ ] 评测：隔离 + Recall + 学习字段完整率（持续）
 
 ## M3 Agent 与治理
 

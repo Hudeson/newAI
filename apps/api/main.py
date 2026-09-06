@@ -2,8 +2,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from api.middleware import RequestIdMiddleware
+from api.routes_ask import router as ask_router
 from api.routes_auth import router as auth_router
 from api.routes_documents import router as documents_router
+from api.routes_learning import router as learning_router
 from api.routes_search import router as search_router
 from api.routes_uploads import router as uploads_router
 from shared.config import get_settings
@@ -24,6 +26,8 @@ app.include_router(auth_router)
 app.include_router(uploads_router)
 app.include_router(documents_router)
 app.include_router(search_router)
+app.include_router(learning_router)
+app.include_router(ask_router)
 
 
 @app.on_event("startup")
@@ -80,6 +84,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E4",
+        "milestone": "E5",
         "request_id": getattr(request.state, "request_id", ""),
     }
