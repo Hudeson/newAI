@@ -20,18 +20,20 @@
 - [x] Compose 草案（`deploy/compose/docker-compose.yml`）
 - [x] Alembic 基线迁移
 - [x] **E0 整体 review + 回归** [`milestones/E0-review.md`](./milestones/E0-review.md)
-- [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model，并入 E1）
+- [x] **E1 身份 / 租户 / Workspace**（本地注册登录 + JWT + 租户隔离）
+- [x] **E1 整体 review + 回归** [`milestones/E1-review.md`](./milestones/E1-review.md)
+- [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model，并入 E2/E4）
 
 ## M1 身份、空间、上传入库
 
-- [ ] OIDC 登录（dev 可用 Keycloak；personal 可本地账号）
-- [ ] Tenant / Workspace / RBAC 最小集
-- [ ] 预签名上传 → 对象存储（MinIO/S3）
+- [x] personal 本地账号（注册/登录/JWT）
+- [x] Tenant / Workspace / RBAC 最小集（admin 建空间）
+- [ ] 预签名上传 → 对象存储（MinIO/S3 或本地适配器）
 - [ ] Parse / Embed Worker + 队列
-- [ ] PostgreSQL Schema（全表 `tenant_id`）
+- [ ] PostgreSQL Schema（全表 `tenant_id`）— 基线已有，上传表待加
 - [ ] Qdrant payload 强制租户/空间/文档字段
 - [ ] 文档 ACL 最小实现
-- [ ] **验收**：双租户隔离测试通过
+- [ ] **验收**：双租户隔离测试通过（上传/检索）
 - [ ] **M1 整体 review + 全量回归**
 
 ## M2 学习总结 + 安全问答

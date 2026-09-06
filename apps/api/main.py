@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from api.middleware import RequestIdMiddleware
+from api.routes_auth import router as auth_router
 from shared.config import get_settings
 from shared.db import db_ping, init_db
 from shared.errors import AppError, ErrorCode
@@ -9,7 +10,6 @@ from shared.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger("api")
-settings = get_settings()
 
 app = FastAPI(
     title="KB Agent API",
@@ -17,12 +17,13 @@ app = FastAPI(
     description="Enterprise knowledge-base agent API",
 )
 app.add_middleware(RequestIdMiddleware)
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
-    logger.info("api_started", profile=settings.profile)
+    logger.info("api_started", profile=get_settings().profile)
 
 
 @app.exception_handler(AppError)
@@ -73,6 +74,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E0",
+        "milestone": "E1",
         "request_id": getattr(request.state, "request_id", ""),
     }
