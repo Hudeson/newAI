@@ -118,3 +118,40 @@ class UploadJob(Base):
     error_message: Mapped[str] = mapped_column(Text, default="")
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Chunk(Base):
+    __tablename__ = "chunks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    version_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    ordinal: Mapped[int] = mapped_column(default=0)
+    content: Mapped[str] = mapped_column(Text, default="")
+    token_count: Mapped[int] = mapped_column(default=0)
+    embedding_json: Mapped[str] = mapped_column(Text, default="[]")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DocumentAcl(Base):
+    __tablename__ = "document_acls"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "principal_type",
+            "principal_id",
+            "permission",
+            name="uq_document_acl",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    principal_type: Mapped[str] = mapped_column(String(32), nullable=False)  # user|workspace
+    principal_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    permission: Mapped[str] = mapped_column(String(32), default="read")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

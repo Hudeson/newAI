@@ -10,6 +10,7 @@ def _client(tmp_path: Path, monkeypatch) -> TestClient:
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'e2.db'}")
     monkeypatch.setenv("JWT_SECRET", "test-secret-at-least-32-bytes-long!!")
     monkeypatch.setenv("LOCAL_STORAGE_DIR", str(tmp_path / "objects"))
+    monkeypatch.setenv("PROFILE", "personal")
     get_settings.cache_clear()
     reset_engine()
     init_db()
@@ -76,11 +77,12 @@ def test_upload_flow_and_idempotency(tmp_path: Path, monkeypatch):
 
     done = client.post(f"/v1/upload-jobs/{job_id}/complete", headers=headers)
     assert done.status_code == 200
-    assert done.json()["status"] == "queued"
+    # Personal profile completes then runs ingest inline (E3).
+    assert done.json()["status"] == "indexed"
 
     got = client.get(f"/v1/upload-jobs/{job_id}", headers=headers)
     assert got.status_code == 200
-    assert got.json()["status"] == "queued"
+    assert got.json()["status"] == "indexed"
 
 
 def test_upload_job_cross_tenant_hidden(tmp_path: Path, monkeypatch):
