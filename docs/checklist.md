@@ -15,10 +15,12 @@
 - [x] 明确：ACL↔向量一致性、文档版本、切块/超长学习、幂等去重、embedding 版本
 - [x] （P1）[`ops-slo-dr.md`](./ops-slo-dr.md) 配额 / SLO / DR / Runbook
 - [x] （P1）[`connectors-and-scim.md`](./connectors-and-scim.md) SCIM / 服务账号 / 连接器
-- [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model 签字）
-- [ ] 仓库骨架 + `personal` / `team` / `enterprise` profile
-- [ ] 错误码、request_id、审计事件字典（与 api-contracts 对齐落地）
-- [ ] Compose（dev）与 Helm 草案
+- [x] 仓库骨架 + `personal` / `team` / `enterprise` profile
+- [x] 错误码、request_id、health/ready 端点
+- [x] Compose 草案（`deploy/compose/docker-compose.yml`）
+- [x] Alembic 基线迁移
+- [x] **E0 整体 review + 回归** [`milestones/E0-review.md`](./milestones/E0-review.md)
+- [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model，并入 E1）
 
 ## M1 身份、空间、上传入库
 
@@ -30,6 +32,7 @@
 - [ ] Qdrant payload 强制租户/空间/文档字段
 - [ ] 文档 ACL 最小实现
 - [ ] **验收**：双租户隔离测试通过
+- [ ] **M1 整体 review + 全量回归**
 
 ## M2 学习总结 + 安全问答
 
