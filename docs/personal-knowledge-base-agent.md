@@ -371,6 +371,17 @@ s3://{bucket}/{tenant_id}/{workspace_id}/{document_id}/derived/text.json
 s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 ```
 
+### 6.4 专题文档（P0 已展开）
+
+| 专题 | 文档 |
+|------|------|
+| 完整 ER、状态机、切块、版本、ACL↔向量、幂等、embedding 版本 | [`data-model.md`](./data-model.md) |
+| OpenAPI 风格 API、错误码、权限矩阵、事件 | [`api-contracts.md`](./api-contracts.md) |
+
+**ACL↔向量（摘要）**：向量 payload 带 `acl_hash`；ACL 变更后异步 patch；检索必须「向量 filter + DB ACL 二次校验」。  
+**文档版本（摘要）**：`documents` + `document_versions`；内容变更升版本，旧版 `superseded`。  
+**切块/超长学习（摘要）**：默认 800/120 tokens；学习 map-reduce 分章再归并。
+
 ---
 
 ## 7. 安全、合规与策略
@@ -577,16 +588,18 @@ s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 
 ### 18.1 P0 — 开工前必须补清
 
-| # | 遗漏项 | 风险 | 建议补法 |
-|---|--------|------|----------|
-| 1 | **完整 API 契约** | 前后端/Worker 各自猜测字段与状态机 | 增补 OpenAPI：上传、任务查询、文档、学习报告、对话、ACL、管理台；含错误码 |
-| 2 | **完整 Schema / ER** | 表只点名、缺关联与约束 | 补 ER：`chunks`、`groups`、`api_keys`、`agent_runs`、`outbox_events`；主键/唯一/索引 |
-| 3 | **ACL 变更如何同步向量** | 改权限后旧 payload 仍可被检索 → 串权 | 定策略：写时更新 `acl_hash` / 重写 payload / 检索时 join 鉴权（推荐：向量 filter + 应用二次校验） |
-| 4 | **文档版本与重传** | 同文件更新、覆盖、历史版本未定义 | 定 `document_version`；新版本重新 ingest；旧向量标记 `superseded` |
-| 5 | **事件与队列语义** | 提了 `DocumentIndexed` 但无事件模型 | 定 Outbox/事件信封：`type/id/tenant_id/occurred_at/payload`；至少一次投递 + 幂等消费者 |
-| 6 | **切块与超长文档学习** | 企业长 PDF 会爆上下文 | 恢复切块参数；学习用 map-reduce（分章总结→归并）；失败可部分成功 |
-| 7 | **幂等与去重** | 重复上传/重复消费产生双份知识 | `checksum+workspace` 去重策略；Job `idempotency_key` |
-| 8 | **Embedding 模型升级** | 换模型后旧向量不可比 | `embedding_model`/`embedding_version` 字段；支持按集合重建与双读切换 |
+| # | 遗漏项 | 状态 | 落点 |
+|---|--------|------|------|
+| 1 | **完整 API 契约** | 已补草案 | [`api-contracts.md`](./api-contracts.md) |
+| 2 | **完整 Schema / ER** | 已补草案 | [`data-model.md`](./data-model.md) |
+| 3 | **ACL 变更如何同步向量** | 已定策略 | `data-model.md` §4 |
+| 4 | **文档版本与重传** | 已定 | `data-model.md` §3 / §9 |
+| 5 | **事件与队列语义** | 已定 Outbox | `data-model.md` §8；`api-contracts.md` §10 |
+| 6 | **切块与超长文档学习** | 已定 | `data-model.md` §3 / §6 |
+| 7 | **幂等与去重** | 已定 | `data-model.md` §5 / §14；上传 API Idempotency-Key |
+| 8 | **Embedding 模型升级** | 已定字段与重建 | `data-model.md` §3 / §10 |
+
+> 仍待实现阶段产出：可运行 OpenAPI YAML、Alembic migration、契约测试。
 
 ### 18.2 P1 — M2/M3 前应补
 
@@ -631,11 +644,10 @@ s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 
 ### 18.5 建议的文档补丁顺序
 
-1. 新增 `docs/api-contracts.md`（OpenAPI 草案）  
-2. 新增 `docs/data-model.md`（ER + 状态机：Upload/Document/Learning/Job）  
-3. 在主文档补「ACL↔向量一致性」「文档版本」「切块/超长学习」三节  
-4. 新增 `docs/ops-slo-dr.md`（配额细则、RPO/RTO、Runbook 大纲）  
-5. M3 前补 `docs/connectors-and-scim.md`
+1. [x] `docs/api-contracts.md`
+2. [x] `docs/data-model.md` + 主文档 §6.4 摘要
+3. [ ] `docs/ops-slo-dr.md`（配额细则、RPO/RTO、Runbook 大纲）
+4. [ ] M3 前 `docs/connectors-and-scim.md`
 
 ---
 

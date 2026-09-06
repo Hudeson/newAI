@@ -7,7 +7,10 @@
 ## 文档
 
 - 架构与计划：[`docs/personal-knowledge-base-agent.md`](./docs/personal-knowledge-base-agent.md)
+- 数据模型 / 状态机：[`docs/data-model.md`](./docs/data-model.md)
+- API 契约草案：[`docs/api-contracts.md`](./docs/api-contracts.md)
 - 实施清单：[`docs/checklist.md`](./docs/checklist.md)
+- 企业 vs 个人对照：[`docs/enterprise-vs-personal.md`](./docs/enterprise-vs-personal.md)
 
 ## 能力总览
 
