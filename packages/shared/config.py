@@ -29,9 +29,10 @@ class Settings(BaseSettings):
     s3_bucket: str = "kb-documents"
     s3_region: str = "us-east-1"
 
-    jwt_secret: str = "dev-change-me-e0"
+    jwt_secret: str = "dev-change-me-e0-please-use-32bytes-min"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
+    local_storage_dir: str = "./data/objects"
 
     @property
     def sqlalchemy_url(self) -> str:

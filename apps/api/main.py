@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from api.middleware import RequestIdMiddleware
 from api.routes_auth import router as auth_router
+from api.routes_uploads import router as uploads_router
 from shared.config import get_settings
 from shared.db import db_ping, init_db
 from shared.errors import AppError, ErrorCode
@@ -18,6 +19,7 @@ app = FastAPI(
 )
 app.add_middleware(RequestIdMiddleware)
 app.include_router(auth_router)
+app.include_router(uploads_router)
 
 
 @app.on_event("startup")
@@ -74,6 +76,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E1",
+        "milestone": "E2",
         "request_id": getattr(request.state, "request_id", ""),
     }

@@ -22,13 +22,15 @@
 - [x] **E0 整体 review + 回归** [`milestones/E0-review.md`](./milestones/E0-review.md)
 - [x] **E1 身份 / 租户 / Workspace**（本地注册登录 + JWT + 租户隔离）
 - [x] **E1 整体 review + 回归** [`milestones/E1-review.md`](./milestones/E1-review.md)
+- [x] **E2 上传 / UploadJob**
+- [x] **E2 整体 review + 回归** [`milestones/E2-review.md`](./milestones/E2-review.md)
 - [ ] 冻结 Tenant / Workspace / ACL 字段级评审（对照 data-model，并入 E2/E4）
 
 ## M1 身份、空间、上传入库
 
 - [x] personal 本地账号（注册/登录/JWT）
 - [x] Tenant / Workspace / RBAC 最小集（admin 建空间）
-- [ ] 预签名上传 → 对象存储（MinIO/S3 或本地适配器）
+- [x] 预签名上传（本地对象存储适配器，E2） → 对象存储（MinIO/S3 或本地适配器）
 - [ ] Parse / Embed Worker + 队列
 - [ ] PostgreSQL Schema（全表 `tenant_id`）— 基线已有，上传表待加
 - [ ] Qdrant payload 强制租户/空间/文档字段
