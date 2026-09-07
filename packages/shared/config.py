@@ -33,10 +33,25 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     local_storage_dir: str = "./data/objects"
+    # Comma-separated extra CORS origins for remote/local deploy, e.g.
+    # http://192.168.1.10:3000,http://kb.example.com
+    cors_origins: str = ""
+    cors_origin_regex: str = r"https://.*\.trycloudflare\.com"
 
     @property
     def sqlalchemy_url(self) -> str:
         return self.database_url
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        base = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+        ]
+        extra = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        return base + extra
 
 
 @lru_cache

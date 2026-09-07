@@ -20,12 +20,13 @@ class DocumentOut(BaseModel):
     workspace_id: str
     title: str
     status: str
+    sensitivity: str = "L2"
     created_by: str
     chunk_count: int = 0
 
 
 class AclEntry(BaseModel):
-    principal_type: str = Field(pattern=r"^(user|workspace)$")
+    principal_type: str = Field(pattern=r"^(user|workspace|group)$")
     principal_id: str
     permission: str = Field(default="read", pattern=r"^(read|write)$")
 
@@ -37,6 +38,10 @@ class AclReplaceRequest(BaseModel):
 class AclOut(BaseModel):
     document_id: str
     entries: list[AclEntry]
+
+
+class SensitivityUpdate(BaseModel):
+    sensitivity: str = Field(pattern=r"^L[1-4]$")
 
 
 @router.get("/documents", response_model=list[DocumentOut])
@@ -71,6 +76,7 @@ def list_documents(
                 workspace_id=doc.workspace_id,
                 title=doc.title,
                 status=doc.status,
+                sensitivity=doc.sensitivity,
                 created_by=doc.created_by,
                 chunk_count=chunk_count,
             )
@@ -107,6 +113,42 @@ def get_document(
         workspace_id=doc.workspace_id,
         title=doc.title,
         status=doc.status,
+        sensitivity=doc.sensitivity,
+        created_by=doc.created_by,
+        chunk_count=chunk_count,
+    )
+
+
+@router.patch("/documents/{document_id}/sensitivity", response_model=DocumentOut)
+def patch_sensitivity(
+    document_id: str,
+    body: SensitivityUpdate,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> DocumentOut:
+    doc = db.scalar(
+        select(Document).where(Document.id == document_id, Document.tenant_id == auth.tenant_id)
+    )
+    if doc is None:
+        raise AppError(ErrorCode.NOT_FOUND, "document not found", status_code=404)
+    doc.sensitivity = body.sensitivity
+    db.flush()
+    chunk_count = len(
+        db.scalars(
+            select(Chunk.id).where(
+                Chunk.tenant_id == auth.tenant_id,
+                Chunk.document_id == document_id,
+                Chunk.status == "active",
+            )
+        ).all()
+    )
+    return DocumentOut(
+        id=doc.id,
+        tenant_id=doc.tenant_id,
+        workspace_id=doc.workspace_id,
+        title=doc.title,
+        status=doc.status,
+        sensitivity=doc.sensitivity,
         created_by=doc.created_by,
         chunk_count=chunk_count,
     )

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from shared.acl import readable_document_ids
-from shared.db.models import AuditEvent, Chunk
+from shared.db.models import AuditEvent, Chunk, Document
 from shared.ingest import tokenize
 from shared.llm import local_complete
 from shared.search import SearchHit, search_chunks
@@ -81,6 +81,19 @@ def ask(
     safe_hits = [h for h in hits if h.chunk_id in valid_ids]
 
     context_blocks = [h.content for h in safe_hits]
+    # Route by highest sensitivity among cited documents (L4 > L1).
+    sensitivity = "L2"
+    if safe_hits:
+        docs = db.scalars(
+            select(Document).where(
+                Document.tenant_id == tenant_id,
+                Document.id.in_({h.document_id for h in safe_hits}),
+            )
+        ).all()
+        order = {"L1": 1, "L2": 2, "L3": 3, "L4": 4}
+        if docs:
+            sensitivity = max(docs, key=lambda d: order.get(d.sensitivity, 2)).sensitivity
+
     answer = local_complete(
         db,
         tenant_id=tenant_id,
@@ -88,6 +101,7 @@ def ask(
         prompt=question,
         context_blocks=context_blocks,
         operation="ask",
+        sensitivity=sensitivity,
     )
     citations = [
         Citation(

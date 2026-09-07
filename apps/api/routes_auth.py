@@ -60,7 +60,11 @@ class UserOut(BaseModel):
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     slug: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9-]+$")
-    publish_mode: str = "auto"
+    publish_mode: str = Field(default="auto", pattern=r"^(auto|approval)$")
+
+
+class WorkspaceUpdate(BaseModel):
+    publish_mode: str = Field(pattern=r"^(auto|approval)$")
 
 
 class WorkspaceOut(BaseModel):
@@ -263,6 +267,43 @@ def create_workspace(
         publish_mode=body.publish_mode,
     )
     db.add(ws)
+    db.flush()
+    return WorkspaceOut(
+        id=ws.id,
+        tenant_id=ws.tenant_id,
+        name=ws.name,
+        slug=ws.slug,
+        publish_mode=ws.publish_mode,
+        status=ws.status,
+    )
+
+
+@router.patch("/workspaces/{workspace_id}", response_model=WorkspaceOut)
+def update_workspace(
+    workspace_id: str,
+    body: WorkspaceUpdate,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> WorkspaceOut:
+    ws = db.scalar(
+        select(Workspace).where(
+            Workspace.id == workspace_id,
+            Workspace.tenant_id == auth.tenant_id,
+        )
+    )
+    if ws is None:
+        raise AppError(ErrorCode.NOT_FOUND, "workspace not found", status_code=404)
+    ws.publish_mode = body.publish_mode
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="workspace.publish_mode.updated",
+            resource_type="workspace",
+            resource_id=ws.id,
+            detail=f'{{"publish_mode":"{body.publish_mode}"}}',
+        )
+    )
     db.flush()
     return WorkspaceOut(
         id=ws.id,

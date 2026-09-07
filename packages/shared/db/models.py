@@ -79,6 +79,7 @@ class Document(Base):
     workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(500), default="")
     status: Mapped[str] = mapped_column(String(32), default="draft")
+    sensitivity: Mapped[str] = mapped_column(String(8), default="L2")  # L1–L4
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -285,5 +286,32 @@ class ConnectorSyncRun(Base):
     items_seen: Mapped[int] = mapped_column(default=0)
     items_imported: Mapped[int] = mapped_column(default=0)
     error_message: Mapped[str] = mapped_column(Text, default="")
+    detail_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ModelRoutePolicy(Base):
+    __tablename__ = "model_route_policies"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "sensitivity", name="uq_model_route_tenant_sensitivity"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    sensitivity: Mapped[str] = mapped_column(String(8), nullable=False)  # L1–L4
+    provider: Mapped[str] = mapped_column(String(64), default="local")
+    model: Mapped[str] = mapped_column(String(64), default="local-extractive")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuditExport(Base):
+    __tablename__ = "audit_exports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ready")
+    object_key: Mapped[str] = mapped_column(String(1000), default="")
+    event_count: Mapped[int] = mapped_column(default=0)
     detail_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

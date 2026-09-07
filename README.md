@@ -14,19 +14,21 @@ ACL-aware RAG, and auditable tool-using agents. `personal` / `team` /
 
 ## Current milestone
 
-**E6 — Frontend** (login / upload / learn / ask / members)
+**M4 — Enterprise hardening** (approval publish, sensitivity routing, audit export)
 
-## Quick start
+## Quick start (local deploy)
 
 ```bash
 python3 -m pip install -e ".[dev]"
 cp .env.example .env
 mkdir -p data
-make test          # API regression (E0–E6)
-make run-api       # http://127.0.0.1:8000/healthz
+./scripts/local-deploy.sh
+# Web: http://127.0.0.1:3000   API: http://127.0.0.1:8000/healthz
 
-cd apps/web && cp .env.example .env.local && npm install && npm run dev
-# Web UI: http://127.0.0.1:3000
+# Or manually:
+make test
+make run-api          # terminal 1
+make run-web          # terminal 2
 ```
 
 ## Layout

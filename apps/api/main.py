@@ -20,6 +20,7 @@ from api.routes_uploads import router as uploads_router
 
 configure_logging()
 logger = get_logger("api")
+settings = get_settings()
 
 app = FastAPI(
     title="KB Agent API",
@@ -29,13 +30,8 @@ app = FastAPI(
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-    ],
-    allow_origin_regex=r"https://.*\.trycloudflare\.com",
+    allow_origins=settings.cors_origin_list,
+    allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -106,6 +102,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E7",
+        "milestone": "M4",
         "request_id": getattr(request.state, "request_id", ""),
     }

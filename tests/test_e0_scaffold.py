@@ -39,7 +39,17 @@ def test_readyz_and_meta(tmp_path: Path, monkeypatch):
 
     meta = client.get("/v1/meta")
     assert meta.status_code == 200
-    assert meta.json()["milestone"] in {"E0", "E1", "E2", "E3", "E4", "E5", "E6", "E7"}
+    assert meta.json()["milestone"] in {
+    "E0",
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "M4",
+}
     assert meta.json()["request_id"]
 
 

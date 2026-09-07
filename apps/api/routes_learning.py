@@ -6,14 +6,14 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from shared.acl import can_read_document
 from shared.db import get_db
-from shared.db.models import Document, LearningReport
+from shared.db.models import AuditEvent, Document, LearningReport, Workspace
 from shared.errors import AppError, ErrorCode
 from shared.learn import learn_document
 from shared.quota import enforce_operation_quota
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from api.auth import AuthContext, get_current_auth
+from api.auth import AuthContext, get_current_auth, require_admin
 
 router = APIRouter(prefix="/v1", tags=["learning"])
 
@@ -28,6 +28,15 @@ class LearningReportOut(BaseModel):
     outline: list[str]
     key_points: list[str]
     provider: str
+
+
+class PendingApprovalOut(BaseModel):
+    report_id: str
+    document_id: str
+    workspace_id: str
+    title: str
+    status: str
+    summary: str
 
 
 def _report_out(report: LearningReport) -> LearningReportOut:
@@ -128,8 +137,73 @@ def publish_learning(
     )
     if report is None:
         raise AppError(ErrorCode.NOT_FOUND, "learning report not found", status_code=404)
+
+    workspace = db.scalar(
+        select(Workspace).where(
+            Workspace.id == doc.workspace_id,
+            Workspace.tenant_id == auth.tenant_id,
+        )
+    )
+    publish_mode = workspace.publish_mode if workspace else "auto"
+    if body.status == "published" and publish_mode == "approval":
+        if auth.role not in {"admin", "owner"}:
+            raise AppError(
+                ErrorCode.FORBIDDEN,
+                "approval-mode workspace requires admin to publish",
+                status_code=403,
+            )
+
     report.status = body.status
     if body.status == "published":
         doc.status = "published"
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="learning.publish",
+            resource_type="learning_report",
+            resource_id=report.id,
+            detail=json.dumps(
+                {
+                    "status": body.status,
+                    "publish_mode": publish_mode,
+                    "document_id": document_id,
+                }
+            ),
+        )
+    )
     db.flush()
     return _report_out(report)
+
+
+@router.get("/admin/approvals/pending", response_model=list[PendingApprovalOut])
+def list_pending_approvals(
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[PendingApprovalOut]:
+    reports = db.scalars(
+        select(LearningReport)
+        .where(
+            LearningReport.tenant_id == auth.tenant_id,
+            LearningReport.status == "draft",
+        )
+        .order_by(LearningReport.created_at.desc())
+        .limit(100)
+    ).all()
+    out: list[PendingApprovalOut] = []
+    for report in reports:
+        doc = db.scalar(select(Document).where(Document.id == report.document_id))
+        ws = db.scalar(select(Workspace).where(Workspace.id == report.workspace_id))
+        if ws is None or ws.publish_mode != "approval":
+            continue
+        out.append(
+            PendingApprovalOut(
+                report_id=report.id,
+                document_id=report.document_id,
+                workspace_id=report.workspace_id,
+                title=doc.title if doc else "",
+                status=report.status,
+                summary=report.summary[:240],
+            )
+        )
+    return out
