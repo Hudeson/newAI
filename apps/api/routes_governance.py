@@ -6,9 +6,12 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from shared.audit_export import create_audit_export, get_audit_export, read_export_bytes
+from shared.config import get_settings
+from shared.credentials import list_credentials, upsert_credential
 from shared.db import get_db
 from shared.db.models import AuditEvent, TenantQuota, UploadJob
 from shared.errors import AppError, ErrorCode
+from shared.gateway import ping_provider
 from shared.policy import list_policies, upsert_policy
 from shared.quota import list_quotas, set_quota, usage_summary
 from sqlalchemy import select
@@ -256,3 +259,142 @@ def download_audit_export(
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="audit-{export.id}.json"'},
     )
+
+
+class LlmCredentialOut(BaseModel):
+    provider: str
+    base_url: str
+    default_model: str
+    key_configured: bool
+    key_prefix: str
+
+
+class LlmCredentialUpdate(BaseModel):
+    provider: str = Field(pattern=r"^(openai_compatible|ollama|local)$")
+    api_key: str | None = None
+    base_url: str = ""
+    default_model: str = ""
+    clear_key: bool = False
+
+
+class LlmPingRequest(BaseModel):
+    provider: str = Field(pattern=r"^(openai_compatible|ollama|local)$")
+    model: str = ""
+    base_url: str = ""
+    api_key: str | None = None
+
+
+class LlmEnvStatus(BaseModel):
+    llm_provider: str
+    llm_base_url: str
+    llm_model: str
+    llm_key_configured: bool
+    ollama_base_url: str
+    ollama_model: str
+
+
+@router.get("/admin/llm/credentials", response_model=list[LlmCredentialOut])
+def get_llm_credentials(
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[LlmCredentialOut]:
+    rows = list_credentials(db, tenant_id=auth.tenant_id)
+    return [
+        LlmCredentialOut(
+            provider=r.provider,
+            base_url=r.base_url,
+            default_model=r.default_model,
+            key_configured=bool(r.api_key_sealed),
+            key_prefix=r.key_prefix,
+        )
+        for r in rows
+    ]
+
+
+@router.put("/admin/llm/credentials", response_model=LlmCredentialOut)
+def put_llm_credential(
+    body: LlmCredentialUpdate,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> LlmCredentialOut:
+    row = upsert_credential(
+        db,
+        tenant_id=auth.tenant_id,
+        provider=body.provider,
+        api_key=body.api_key,
+        base_url=body.base_url,
+        default_model=body.default_model,
+        clear_key=body.clear_key,
+    )
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="admin.llm.credential.updated",
+            resource_type="llm_credential",
+            resource_id=row.id,
+            detail=json.dumps(
+                {
+                    "provider": body.provider,
+                    "key_set": bool(body.api_key),
+                    "clear_key": body.clear_key,
+                }
+            ),
+        )
+    )
+    return LlmCredentialOut(
+        provider=row.provider,
+        base_url=row.base_url,
+        default_model=row.default_model,
+        key_configured=bool(row.api_key_sealed),
+        key_prefix=row.key_prefix,
+    )
+
+
+@router.get("/admin/llm/env", response_model=LlmEnvStatus)
+def get_llm_env(auth: AuthContext = Depends(require_admin)) -> LlmEnvStatus:
+    settings = get_settings()
+    return LlmEnvStatus(
+        llm_provider=settings.llm_provider,
+        llm_base_url=settings.llm_base_url,
+        llm_model=settings.llm_model,
+        llm_key_configured=bool(settings.llm_api_key),
+        ollama_base_url=settings.ollama_base_url,
+        ollama_model=settings.ollama_model,
+    )
+
+
+@router.post("/admin/llm/ping")
+def post_llm_ping(
+    body: LlmPingRequest,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    from shared.credentials import resolve_connection
+
+    provider, model, api_key, base_url = resolve_connection(
+        db,
+        tenant_id=auth.tenant_id,
+        provider=body.provider,
+        model=body.model,
+    )
+    if body.base_url:
+        base_url = body.base_url
+    if body.api_key:
+        api_key = body.api_key
+    if body.model:
+        model = body.model
+    try:
+        return ping_provider(
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise AppError(
+            ErrorCode.DEPENDENCY_UNAVAILABLE,
+            f"llm ping failed: {exc}",
+            status_code=502,
+            details={"provider": provider, "model": model},
+        ) from exc

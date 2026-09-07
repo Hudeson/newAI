@@ -147,6 +147,23 @@ export type AuditExport = {
   download_url: string;
 };
 
+export type LlmCredential = {
+  provider: string;
+  base_url: string;
+  default_model: string;
+  key_configured: boolean;
+  key_prefix: string;
+};
+
+export type LlmEnvStatus = {
+  llm_provider: string;
+  llm_base_url: string;
+  llm_model: string;
+  llm_key_configured: boolean;
+  ollama_base_url: string;
+  ollama_model: string;
+};
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -289,6 +306,41 @@ export const api = {
 
   createAuditExport(token: string) {
     return apiFetch<AuditExport>("/v1/admin/audit-exports", { method: "POST", token });
+  },
+
+  llmCredentials(token: string) {
+    return apiFetch<LlmCredential[]>("/v1/admin/llm/credentials", { token });
+  },
+
+  saveLlmCredential(
+    token: string,
+    body: {
+      provider: string;
+      api_key?: string;
+      base_url?: string;
+      default_model?: string;
+      clear_key?: boolean;
+    },
+  ) {
+    return apiFetch<LlmCredential>("/v1/admin/llm/credentials", {
+      method: "PUT",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  llmEnv(token: string) {
+    return apiFetch<LlmEnvStatus>("/v1/admin/llm/env", { token });
+  },
+
+  llmPing(
+    token: string,
+    body: { provider: string; model?: string; base_url?: string; api_key?: string },
+  ) {
+    return apiFetch<{ ok: boolean; provider: string; model: string; preview: string }>(
+      "/v1/admin/llm/ping",
+      { method: "POST", token, body: JSON.stringify(body) },
+    );
   },
 
   ask(token: string, question: string, limit = 5) {

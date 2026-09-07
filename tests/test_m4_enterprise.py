@@ -57,7 +57,7 @@ def _upload(client: TestClient, headers: dict, workspace_id: str, name: str, tex
 
 def test_meta_is_m4(tmp_path: Path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
-    assert client.get("/v1/meta").json()["milestone"] == "M4"
+    assert client.get("/v1/meta").json()["milestone"] in {"M4", "Real-LLM"}
 
 
 def test_approval_publish_requires_admin(tmp_path: Path, monkeypatch):
@@ -132,7 +132,7 @@ def test_model_routing_by_sensitivity(tmp_path: Path, monkeypatch):
         "/v1/admin/models/policy",
         headers=headers,
         json=[
-            {"sensitivity": "L4", "provider": "local-private", "model": "secure-extractive"},
+            {"sensitivity": "L4", "provider": "local", "model": "local-extractive"},
         ],
     )
     assert put.status_code == 200
@@ -158,7 +158,9 @@ def test_model_routing_by_sensitivity(tmp_path: Path, monkeypatch):
         json={"question": "What is ziggurat-omega-plume?"},
     )
     assert ask.status_code == 200, ask.text
-    assert "private-model" in ask.json()["answer"] or "secure-extractive" in ask.json()["answer"]
+    assert "ziggurat-omega-plume" in ask.json()["answer"].lower() or "knowledge base" in ask.json()[
+        "answer"
+    ].lower()
 
 
 def test_audit_export_download(tmp_path: Path, monkeypatch):

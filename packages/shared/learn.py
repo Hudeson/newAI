@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from shared.db.models import AuditEvent, Chunk, Document, LearningReport, Workspace
 from shared.ingest import tokenize
-from shared.llm import record_usage
+from shared.llm import learn_with_gateway, record_usage
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 
@@ -89,7 +89,20 @@ def learn_document(
 
     version_id = version_id or chunks[0].version_id
     text = "\n\n".join(c.content for c in chunks)
-    summary, outline, key_points = build_learning_payload(text)
+    provider_label = "local-extractive"
+    gateway_payload = learn_with_gateway(
+        db,
+        tenant_id=tenant_id,
+        user_id=actor_id,
+        text=text,
+        sensitivity=getattr(doc, "sensitivity", "L2") or "L2",
+    )
+    if gateway_payload:
+        summary, outline, key_points, provider_label = gateway_payload
+        usage_already_recorded = True
+    else:
+        summary, outline, key_points = build_learning_payload(text)
+        usage_already_recorded = False
 
     workspace = db.scalar(select(Workspace).where(Workspace.id == doc.workspace_id))
     publish_mode = workspace.publish_mode if workspace else "auto"
@@ -111,7 +124,7 @@ def learn_document(
             summary=summary,
             outline_json=json.dumps(outline, ensure_ascii=False),
             key_points_json=json.dumps(key_points, ensure_ascii=False),
-            provider="local-extractive",
+            provider=provider_label,
         )
         db.add(report)
     else:
@@ -120,26 +133,27 @@ def learn_document(
         report.summary = summary
         report.outline_json = json.dumps(outline, ensure_ascii=False)
         report.key_points_json = json.dumps(key_points, ensure_ascii=False)
-        report.provider = "local-extractive"
+        report.provider = provider_label
 
     if status == "published":
         doc.status = "published"
     elif doc.status == "indexed":
         doc.status = "learned"
 
-    in_tokens = len(tokenize(text))
-    out_tokens = len(tokenize(summary)) + sum(len(tokenize(x)) for x in outline + key_points)
-    record_usage(
-        db,
-        tenant_id=tenant_id,
-        user_id=actor_id,
-        operation="learn",
-        provider="local",
-        model="local-extractive",
-        input_tokens=in_tokens,
-        output_tokens=out_tokens,
-        detail={"document_id": document_id, "version_id": version_id},
-    )
+    if not usage_already_recorded:
+        in_tokens = len(tokenize(text))
+        out_tokens = len(tokenize(summary)) + sum(len(tokenize(x)) for x in outline + key_points)
+        record_usage(
+            db,
+            tenant_id=tenant_id,
+            user_id=actor_id,
+            operation="learn",
+            provider="local",
+            model="local-extractive",
+            input_tokens=in_tokens,
+            output_tokens=out_tokens,
+            detail={"document_id": document_id, "version_id": version_id},
+        )
     db.add(
         AuditEvent(
             tenant_id=tenant_id,

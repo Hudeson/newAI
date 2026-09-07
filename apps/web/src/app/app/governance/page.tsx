@@ -7,6 +7,8 @@ import {
   getApiBase,
   type AgentRun,
   type Connector,
+  type LlmCredential,
+  type LlmEnvStatus,
   type ModelPolicy,
   type PendingApproval,
   type Quota,
@@ -21,6 +23,13 @@ export default function GovernancePage() {
   const [connectors, setConnectors] = useState<Connector[]>([]);
   const [policies, setPolicies] = useState<ModelPolicy[]>([]);
   const [pending, setPending] = useState<PendingApproval[]>([]);
+  const [llmEnv, setLlmEnv] = useState<LlmEnvStatus | null>(null);
+  const [creds, setCreds] = useState<LlmCredential[]>([]);
+  const [keyDraft, setKeyDraft] = useState("");
+  const [baseUrlDraft, setBaseUrlDraft] = useState("https://api.deepseek.com/v1");
+  const [modelDraft, setModelDraft] = useState("deepseek-chat");
+  const [providerDraft, setProviderDraft] = useState("openai_compatible");
+  const [pingMsg, setPingMsg] = useState("");
   const [goal, setGoal] = useState("Summarize ACL and quota policies");
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
   const [connectorName, setConnectorName] = useState("Inbox S3");
@@ -39,14 +48,21 @@ export default function GovernancePage() {
     setMeters(summary);
     setConnectors(conns);
     if (me?.role === "admin" || me?.role === "owner") {
-      const [q, p, a] = await Promise.all([
+      const [q, p, a, c, e] = await Promise.all([
         api.quotas(token),
         api.modelPolicy(token),
         api.pendingApprovals(token),
+        api.llmCredentials(token),
+        api.llmEnv(token),
       ]);
       setQuotas(q);
       setPolicies(p);
       setPending(a);
+      setCreds(c);
+      setLlmEnv(e);
+      const existing = c.find((x) => x.provider === "openai_compatible");
+      if (existing?.base_url) setBaseUrlDraft(existing.base_url);
+      if (existing?.default_model) setModelDraft(existing.default_model);
     }
   }, [token, workspaceId, me?.role]);
 
@@ -180,6 +196,46 @@ export default function GovernancePage() {
     }
   }
 
+  async function saveCredential() {
+    if (!token) return;
+    setBusy("llm");
+    setError("");
+    try {
+      await api.saveLlmCredential(token, {
+        provider: providerDraft,
+        api_key: keyDraft || undefined,
+        base_url: baseUrlDraft,
+        default_model: modelDraft,
+      });
+      setKeyDraft("");
+      await refresh();
+      setPingMsg("Credential saved (key never re-displayed).");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Save credential failed");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function pingLlm() {
+    if (!token) return;
+    setBusy("ping");
+    setError("");
+    try {
+      const res = await api.llmPing(token, {
+        provider: providerDraft,
+        model: modelDraft,
+        base_url: baseUrlDraft,
+        api_key: keyDraft || undefined,
+      });
+      setPingMsg(`Ping ok · ${res.provider}/${res.model} · ${res.preview}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Ping failed");
+    } finally {
+      setBusy("");
+    }
+  }
+
   const isAdmin = me?.role === "admin" || me?.role === "owner";
 
   return (
@@ -187,10 +243,91 @@ export default function GovernancePage() {
       <section className="panel stack">
         <h1>Governance</h1>
         <p className="muted">
-          Quotas, approvals, model routing, audit export, agent tools, and connectors (M4).
+          Model keys, routing, approvals, quotas, agent tools, and connectors.
         </p>
         {error ? <div className="error">{error}</div> : null}
       </section>
+
+      {isAdmin ? (
+        <section className="panel stack">
+          <h2>模型与密钥（API Key）</h2>
+          <p className="muted">
+            配置 OpenAI 兼容端点（DeepSeek / OpenAI 等）或 Ollama。也可在服务器 `.env` 写
+            `LLM_API_KEY`。环境：
+            {llmEnv
+              ? ` provider=${llmEnv.llm_provider}, env_key=${llmEnv.llm_key_configured ? "yes" : "no"}`
+              : " —"}
+          </p>
+          <label className="field">
+            Provider
+            <select
+              className="select"
+              value={providerDraft}
+              onChange={(e) => setProviderDraft(e.target.value)}
+            >
+              <option value="openai_compatible">openai_compatible</option>
+              <option value="ollama">ollama</option>
+              <option value="local">local</option>
+            </select>
+          </label>
+          <label className="field">
+            Base URL
+            <input
+              className="input"
+              value={baseUrlDraft}
+              onChange={(e) => setBaseUrlDraft(e.target.value)}
+              placeholder="https://api.deepseek.com/v1"
+            />
+          </label>
+          <label className="field">
+            Default model
+            <input
+              className="input"
+              value={modelDraft}
+              onChange={(e) => setModelDraft(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            API Key（只写不回显）
+            <input
+              className="input"
+              type="password"
+              value={keyDraft}
+              onChange={(e) => setKeyDraft(e.target.value)}
+              placeholder={creds.find((c) => c.provider === providerDraft)?.key_prefix || "sk-..."}
+            />
+          </label>
+          <div className="row">
+            <button className="btn accent" type="button" disabled={busy === "llm"} onClick={saveCredential}>
+              Save credential
+            </button>
+            <button className="btn" type="button" disabled={busy === "ping"} onClick={pingLlm}>
+              Test connection
+            </button>
+          </div>
+          {pingMsg ? <p className="muted">{pingMsg}</p> : null}
+          {creds.length ? (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Model</th>
+                  <th>Key</th>
+                </tr>
+              </thead>
+              <tbody>
+                {creds.map((c) => (
+                  <tr key={c.provider}>
+                    <td>{c.provider}</td>
+                    <td>{c.default_model || "—"}</td>
+                    <td>{c.key_configured ? c.key_prefix : "not set"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : null}
+        </section>
+      ) : null}
 
       {isAdmin ? (
         <section className="panel stack">
