@@ -22,7 +22,7 @@ if [[ -f logs/api.pid ]]; then kill "$(cat logs/api.pid)" 2>/dev/null || true; f
 if [[ -f logs/web.pid ]]; then kill "$(cat logs/web.pid)" 2>/dev/null || true; fi
 
 echo "Starting API on 0.0.0.0:8000 ..."
-nohup env PYTHONPATH=packages:apps \
+nohup env PYTHONPATH=packages:apps/api \
   uvicorn api.main:app --host 0.0.0.0 --port 8000 \
   > logs/api.log 2>&1 &
 echo $! > logs/api.pid
