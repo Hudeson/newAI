@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 60.0
     credentials_secret: str = ""
 
+    # Knowledge graph (M5)
+    graph_extract_on_ingest: bool = False
+    graph_extract_max_chunks_per_doc: int = 40
+    graph_extract_max_docs_per_day: int = 20
+    graph_neighbor_max_depth: int = 2
+    graph_ask_augment_default: bool = False
+    graph_local_fallback: bool = True
+
     @property
     def sqlalchemy_url(self) -> str:
         return self.database_url

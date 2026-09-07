@@ -151,6 +151,20 @@ def build_learn_messages(*, text: str) -> list[dict[str, str]]:
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+def build_graph_extract_messages(*, title: str, text: str) -> list[dict[str, str]]:
+    system = (
+        "You extract a knowledge graph from a document chunk. "
+        "Respond with JSON only: "
+        '{"entities":[{"name":"...","type":"person|organization|product|concept|'
+        'location|event|document_ref|other","aliases":["..."]}],'
+        '"relations":[{"subject":"...","predicate":"related_to|part_of|works_at|'
+        'authored_by|depends_on|defines|references|located_in|occurs_in|synonym_of",'
+        '"object":"...","evidence":"..."}]}.'
+        " Use only facts present in the text. Prefer controlled types and predicates."
+    )
+    user = f"Title: {title or '(untitled)'}\n\nChunk:\n{(text or '')[:8000]}"
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
 def ping_provider(
     *,
     provider: str,

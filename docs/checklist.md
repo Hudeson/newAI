@@ -74,11 +74,11 @@
 - [ ] OpenSearch（如需要）
 - [ ] **知识图谱** — 设计 [`knowledge-graph.md`](./knowledge-graph.md)；计划 [`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md)
   - [x] KG.0 详细设计与执行计划
-  - [ ] KG.1 存储 + 抽取骨架
-  - [ ] KG.2 查询 API + ACL
-  - [ ] KG.3 Ask 图谱增强
-  - [ ] KG.4 前端 `/app/graph`
-  - [ ] KG.5 review + checklist 关闭 [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md)（实现后补）
+  - [x] KG.1 存储 + 抽取骨架
+  - [x] KG.2 查询 API + ACL
+  - [x] KG.3 Ask 图谱增强
+  - [x] KG.4 前端 `/app/graph`
+  - [x] KG.5 review + checklist 关闭 [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md)
 - [ ] 多模态
 - [ ] 质量评测门禁接入 CI
 - [ ] 成本优化（小模型摘要、缓存、批处理）

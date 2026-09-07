@@ -76,7 +76,7 @@ def test_list_users_and_documents_for_web(tmp_path: Path, monkeypatch):
     assert docs.json()[0]["chunk_count"] >= 1
 
     meta = client.get("/v1/meta")
-    assert meta.json()["milestone"] in {"E6", "E7", "M4", "Real-LLM"}
+    assert meta.json()["milestone"] in {"E6", "E7", "M4", "Real-LLM", "Knowledge-Graph"}
 
 
 def test_cors_allows_web_origin(tmp_path: Path, monkeypatch):

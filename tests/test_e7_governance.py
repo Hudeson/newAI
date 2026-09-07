@@ -37,7 +37,7 @@ def _register(client: TestClient, slug: str, email: str) -> dict:
 
 def test_meta_is_e7(tmp_path: Path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
-    assert client.get("/v1/meta").json()["milestone"] in {"E7", "M4", "Real-LLM"}
+    assert client.get("/v1/meta").json()["milestone"] in {"E7", "M4", "Real-LLM", "Knowledge-Graph"}
 
 
 def test_quota_enforcement_on_ask(tmp_path: Path, monkeypatch):

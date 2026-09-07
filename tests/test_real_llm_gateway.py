@@ -61,7 +61,7 @@ def _upload(client: TestClient, headers: dict, workspace_id: str, name: str, tex
 
 def test_meta_real_llm(tmp_path: Path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
-    assert client.get("/v1/meta").json()["milestone"] == "Real-LLM"
+    assert client.get("/v1/meta").json()["milestone"] == "Knowledge-Graph"
 
 
 def test_credential_upsert_and_env_status(tmp_path: Path, monkeypatch):

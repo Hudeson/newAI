@@ -16,6 +16,7 @@ export default function AskPage() {
   const [active, setActive] = useState<AskResponse | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [graphAugment, setGraphAugment] = useState(false);
 
   async function onAsk(e: FormEvent) {
     e.preventDefault();
@@ -23,7 +24,7 @@ export default function AskPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await api.ask(token, question.trim());
+      const result = await api.ask(token, question.trim(), 5, graphAugment);
       setTurns((prev) => [...prev, { question: question.trim(), result }]);
       setActive(result);
       setQuestion("");
@@ -66,6 +67,14 @@ export default function AskPage() {
               placeholder="What did we conclude about …?"
               required
             />
+          </label>
+          <label className="row" style={{ gap: 8, alignItems: "center" }}>
+            <input
+              type="checkbox"
+              checked={graphAugment}
+              onChange={(e) => setGraphAugment(e.target.checked)}
+            />
+            <span>Graph augment (include entity neighborhood in context)</span>
           </label>
           {error ? <div className="error">{error}</div> : null}
           <button className="btn accent" type="submit" disabled={busy}>

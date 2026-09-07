@@ -60,7 +60,7 @@
 | E6 | 前端可用 | Next.js 上传/状态/简单问答 | E5 |
 | E7 | 治理与企业件 | 配额、Agent、SCIM、连接器… | E6 |
 
-**当前执行焦点：M5 知识图谱 KG.1（存储 + 抽取）**；设计见 [`knowledge-graph.md`](./knowledge-graph.md)。
+**当前执行焦点：M5 知识图谱 MVP 已关闭**；其余 M5 项（多区域 / OpenSearch / 多模态 / 评测 CI）待排期。
 
 ---
 
@@ -303,10 +303,10 @@ docs/               # 已有设计
 | 阶段 | 状态 | 文档 |
 |------|------|------|
 | KG.0 详细设计与计划 | **完成** | [`knowledge-graph.md`](./knowledge-graph.md)、[`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md) |
-| KG.1 存储 + 抽取 | 待开工 | 实现分支建议 `cursor/m5-knowledge-graph-4365` |
-| KG.2 查询 + ACL | 待开工 | |
-| KG.3 Ask 增强 | 待开工 | |
-| KG.4 前端 | 待开工 | |
-| KG.5 门禁 | 待开工 | `M5-kg-review.md` |
+| KG.1 存储 + 抽取 | **完成** | migration `0007` + `shared/graph.py` + extract API |
+| KG.2 查询 + ACL | **完成** | entities/neighbors/relations/stats |
+| KG.3 Ask 增强 | **完成** | `graph_augment` |
+| KG.4 前端 | **完成** | `/app/graph` + Ask 开关 |
+| KG.5 门禁 | **完成** | [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md) |
 
 **设计锁定**：SQL 邻接表优先、列表 UI 优先、图谱作为 RAG 增强（默认关闭）、租户/ACL 强制、抽取复用 Real-LLM Gateway；Neo4j/大画布/多模态实体不在本里程碑。
