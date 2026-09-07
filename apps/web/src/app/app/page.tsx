@@ -5,6 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, type KbDocument } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const STATUS_LABEL: Record<string, string> = {
+  published: "已发布",
+  draft: "草稿",
+  indexed: "已入库",
+  ready: "就绪",
+  processing: "处理中",
+};
+
 export default function LibraryPage() {
   const { token, workspaceId, refresh } = useAuth();
   const [docs, setDocs] = useState<KbDocument[]>([]);
@@ -20,7 +28,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     load().catch((err) =>
-      setError(err instanceof ApiError ? err.message : "Failed to load documents"),
+      setError(err instanceof ApiError ? err.message : "加载文档失败"),
     );
   }, [load]);
 
@@ -30,11 +38,12 @@ export default function LibraryPage() {
     setError("");
     try {
       const job = await api.uploadFile(token, workspaceId, file);
-      setLastJob(`${job.filename} → ${job.status}`);
+      const status = STATUS_LABEL[job.status] || job.status;
+      setLastJob(`${job.filename} → ${status}`);
       await refresh();
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Upload failed");
+      setError(err instanceof ApiError ? err.message : "上传失败");
     } finally {
       setBusy(false);
     }
@@ -43,14 +52,13 @@ export default function LibraryPage() {
   return (
     <div className="stack">
       <section className="panel hero">
-        <h1>Library</h1>
+        <h1>文库</h1>
         <p className="muted">
-          Drop markdown/text into the active workspace. Ingest + learn run automatically on
-          personal profile.
+          将 Markdown / 文本上传到当前工作区。个人版会自动完成入库与学习总结。
         </p>
         <div className="row" style={{ marginTop: 16 }}>
           <label className="btn accent">
-            {busy ? "Uploading…" : "Upload document"}
+            {busy ? "上传中…" : "上传文档"}
             <input
               type="file"
               accept=".md,.txt,text/plain,text/markdown"
@@ -65,16 +73,16 @@ export default function LibraryPage() {
       </section>
 
       <section className="panel">
-        <h2>Documents</h2>
+        <h2>文档列表</h2>
         {docs.length === 0 ? (
-          <p className="muted">No documents yet in this workspace.</p>
+          <p className="muted">当前工作区还没有文档。</p>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Status</th>
-                <th>Chunks</th>
+                <th>标题</th>
+                <th>状态</th>
+                <th>分块数</th>
                 <th></th>
               </tr>
             </thead>
@@ -84,12 +92,12 @@ export default function LibraryPage() {
                   <td>{d.title}</td>
                   <td>
                     <span className={`badge ${d.status === "published" ? "ok" : "warn"}`}>
-                      {d.status}
+                      {STATUS_LABEL[d.status] || d.status}
                     </span>
                   </td>
                   <td>{d.chunk_count}</td>
                   <td>
-                    <Link href={`/app/learn/${d.id}`}>Learning →</Link>
+                    <Link href={`/app/learn/${d.id}`}>学习报告 →</Link>
                   </td>
                 </tr>
               ))}

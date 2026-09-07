@@ -6,11 +6,11 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 
 const links = [
-  { href: "/app", label: "Library" },
-  { href: "/app/ask", label: "Ask" },
-  { href: "/app/graph", label: "Graph" },
-  { href: "/app/members", label: "Members" },
-  { href: "/app/governance", label: "Governance" },
+  { href: "/app", label: "文库" },
+  { href: "/app/ask", label: "问答" },
+  { href: "/app/graph", label: "知识图谱" },
+  { href: "/app/members", label: "成员" },
+  { href: "/app/governance", label: "治理" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [loading, token, router]);
 
   if (loading || !token) {
-    return <main className="main">Loading workspace…</main>;
+    return <main className="main">正在加载工作区…</main>;
   }
 
   return (
@@ -51,14 +51,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <small>{me?.role}</small>
           </div>
           <button className="btn ghost" onClick={logout} type="button">
-            Sign out
+            退出登录
           </button>
         </div>
       </aside>
       <div className="main">
         <div className="topbar">
           <div>
-            <div className="muted">Workspace</div>
+            <div className="muted">工作区</div>
             <select
               className="select"
               value={workspaceId || ""}

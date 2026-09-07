@@ -4,7 +4,7 @@ import { AuthProvider } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Atrium KB",
-  description: "Personal and enterprise knowledge-base agent",
+  description: "个人与企业知识库智能体",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

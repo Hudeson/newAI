@@ -6,6 +6,11 @@ import { useEffect, useState } from "react";
 import { api, ApiError, type KbDocument, type LearningReport } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const REPORT_STATUS: Record<string, string> = {
+  draft: "草稿",
+  published: "已发布",
+};
+
 export default function LearnPage() {
   const params = useParams<{ documentId: string }>();
   const documentId = params.documentId;
@@ -23,7 +28,7 @@ export default function LearnPage() {
         setReport(r);
       })
       .catch((err) =>
-        setError(err instanceof ApiError ? err.message : "Failed to load learning report"),
+        setError(err instanceof ApiError ? err.message : "加载学习报告失败"),
       );
   }, [token, documentId]);
 
@@ -35,7 +40,7 @@ export default function LearnPage() {
       const r = await api.relearn(token, documentId);
       setReport(r);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Re-learn failed");
+      setError(err instanceof ApiError ? err.message : "重新学习失败");
     } finally {
       setBusy(false);
     }
@@ -49,7 +54,7 @@ export default function LearnPage() {
       const r = await api.publishLearning(token, documentId, status);
       setReport(r);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Publish failed");
+      setError(err instanceof ApiError ? err.message : "发布失败");
     } finally {
       setBusy(false);
     }
@@ -61,7 +66,7 @@ export default function LearnPage() {
       const d = await api.setSensitivity(token, documentId, level);
       setDoc(d);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sensitivity update failed");
+      setError(err instanceof ApiError ? err.message : "敏感级更新失败");
     }
   }
 
@@ -71,33 +76,33 @@ export default function LearnPage() {
     <div className="stack">
       <div className="row">
         <Link href="/app" className="muted">
-          ← Library
+          ← 返回文库
         </Link>
       </div>
       <section className="panel">
-        <h1>{doc?.title || "Learning report"}</h1>
+        <h1>{doc?.title || "学习报告"}</h1>
         <p className="muted">
-          Status: {report?.status || "—"} · Provider: {report?.provider || "—"} · Sensitivity:{" "}
-          {doc?.sensitivity || "L2"}
+          状态：{REPORT_STATUS[report?.status || ""] || report?.status || "—"} · 模型：
+          {report?.provider || "—"} · 敏感级：{doc?.sensitivity || "L2"}
         </p>
         <div className="row">
           <button className="btn" type="button" disabled={busy} onClick={relearn}>
-            {busy ? "Working…" : "Re-run learn"}
+            {busy ? "处理中…" : "重新学习"}
           </button>
           {report?.status === "draft" ? (
             <button className="btn accent" type="button" disabled={busy} onClick={() => publish("published")}>
-              Approve & publish
+              审批并发布
             </button>
           ) : null}
           {report?.status === "published" ? (
             <button className="btn" type="button" disabled={busy} onClick={() => publish("draft")}>
-              Revert to draft
+              退回草稿
             </button>
           ) : null}
         </div>
         {isAdmin ? (
           <label className="field" style={{ marginTop: 12, maxWidth: 220 }}>
-            Sensitivity
+            敏感级
             <select
               className="select"
               value={doc?.sensitivity || "L2"}
@@ -117,9 +122,9 @@ export default function LearnPage() {
       {report ? (
         <div className="split">
           <section className="panel stack">
-            <h2>Summary</h2>
-            <p>{report.summary || "No summary yet."}</p>
-            <h2>Key points</h2>
+            <h2>摘要</h2>
+            <p>{report.summary || "暂无摘要。"}</p>
+            <h2>要点</h2>
             <ul>
               {report.key_points.map((p) => (
                 <li key={p}>{p}</li>
@@ -127,7 +132,7 @@ export default function LearnPage() {
             </ul>
           </section>
           <section className="panel stack">
-            <h2>Outline</h2>
+            <h2>大纲</h2>
             <ol>
               {report.outline.map((o) => (
                 <li key={o}>{o}</li>

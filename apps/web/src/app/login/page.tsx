@@ -32,7 +32,7 @@ export default function LoginPage() {
       await setSession(tok.access_token);
       router.push("/app");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Login failed");
+      setError(err instanceof ApiError ? err.message : "登录失败");
     } finally {
       setBusy(false);
     }
@@ -45,19 +45,18 @@ export default function LoginPage() {
           <div className="brand">
             Atrium <span>KB</span>
           </div>
-          <h1>Your knowledge, grounded and answerable.</h1>
+          <h1>你的知识，可检索、可追问、有出处。</h1>
           <p className="muted" style={{ color: "rgba(238,246,243,0.75)" }}>
-            Upload documents, learn summaries, and ask with citations — tenant-isolated by
-            design.
+            上传文档、生成学习总结，并在租户隔离下进行带引用的问答。
           </p>
         </div>
       </section>
       <section className="auth-panel">
         <form className="panel auth-card stack" onSubmit={onSubmit}>
-          <h2>Sign in</h2>
-          <p className="muted">Use your tenant slug and account.</p>
+          <h2>登录</h2>
+          <p className="muted">请输入租户标识与账号。</p>
           <label className="field">
-            Tenant slug
+            租户标识
             <input
               className="input"
               value={tenantSlug}
@@ -66,7 +65,7 @@ export default function LoginPage() {
             />
           </label>
           <label className="field">
-            Email
+            邮箱
             <input
               className="input"
               type="email"
@@ -76,7 +75,7 @@ export default function LoginPage() {
             />
           </label>
           <label className="field">
-            Password
+            密码
             <input
               className="input"
               type="password"
@@ -87,10 +86,10 @@ export default function LoginPage() {
           </label>
           {error ? <div className="error">{error}</div> : null}
           <button className="btn accent" disabled={busy} type="submit">
-            {busy ? "Signing in…" : "Continue"}
+            {busy ? "登录中…" : "进入"}
           </button>
           <p className="muted">
-            New tenant? <Link href="/register">Create workspace</Link>
+            新租户？ <Link href="/register">创建工作区</Link>
           </p>
         </form>
       </section>

@@ -13,6 +13,32 @@ import {
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const STATUS_LABEL: Record<string, string> = {
+  published: "已发布",
+  draft: "草稿",
+  indexed: "已入库",
+  ready: "就绪",
+};
+
+const JOB_STATUS: Record<string, string> = {
+  queued: "排队中",
+  running: "运行中",
+  succeeded: "已成功",
+  failed: "失败",
+  cancelled: "已取消",
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  person: "人物",
+  organization: "组织",
+  product: "产品",
+  concept: "概念",
+  location: "地点",
+  event: "事件",
+  document_ref: "文档",
+  other: "其他",
+};
+
 export default function GraphPage() {
   const { token, workspaceId } = useAuth();
   const [stats, setStats] = useState<GraphStats | null>(null);
@@ -41,7 +67,7 @@ export default function GraphPage() {
 
   useEffect(() => {
     refresh().catch((err) =>
-      setError(err instanceof ApiError ? err.message : "Failed to load graph"),
+      setError(err instanceof ApiError ? err.message : "加载图谱失败"),
     );
   }, [refresh]);
 
@@ -55,7 +81,7 @@ export default function GraphPage() {
       setJob(j);
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Extract failed");
+      setError(err instanceof ApiError ? err.message : "抽取失败");
     } finally {
       setBusy(false);
     }
@@ -72,7 +98,7 @@ export default function GraphPage() {
       setSelected(detail);
       setNeighbors(nb);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load entity");
+      setError(err instanceof ApiError ? err.message : "加载实体失败");
     }
   }
 
@@ -82,28 +108,28 @@ export default function GraphPage() {
     try {
       setEntities(await api.graphEntities(token, query.trim() || undefined));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Search failed");
+      setError(err instanceof ApiError ? err.message : "搜索失败");
     }
   }
 
   return (
     <div className="split">
       <section className="panel stack">
-        <h1>Graph</h1>
+        <h1>知识图谱</h1>
         <p className="muted">
-          Extract entities and relations from indexed documents. Visibility follows document ACL.
+          从已入库文档抽取实体与关系。可见性遵循文档 ACL。
         </p>
         {stats ? (
           <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-            <span className="badge ok">{stats.entities} entities</span>
-            <span className="badge ok">{stats.relations} relations</span>
-            <span className="badge ok">{stats.documents_covered} docs</span>
+            <span className="badge ok">{stats.entities} 个实体</span>
+            <span className="badge ok">{stats.relations} 条关系</span>
+            <span className="badge ok">{stats.documents_covered} 篇文档</span>
           </div>
         ) : null}
 
         <form className="stack" onSubmit={onExtract}>
           <label className="field">
-            Document
+            文档
             <select
               className="select"
               value={documentId}
@@ -111,18 +137,18 @@ export default function GraphPage() {
             >
               {docs.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.title || d.id.slice(0, 8)} ({d.status})
+                  {d.title || d.id.slice(0, 8)}（{STATUS_LABEL[d.status] || d.status}）
                 </option>
               ))}
             </select>
           </label>
           <button className="btn accent" type="submit" disabled={busy || !documentId}>
-            {busy ? "Extracting…" : "Extract graph"}
+            {busy ? "抽取中…" : "抽取图谱"}
           </button>
           {job ? (
             <p className="muted">
-              Job {job.status}: {job.entities_created} entities / {job.relations_created} relations
-              ({job.chunks_done}/{job.chunks_total} chunks)
+              任务{JOB_STATUS[job.status] || job.status}：{job.entities_created} 个实体 /{" "}
+              {job.relations_created} 条关系（{job.chunks_done}/{job.chunks_total} 分块）
             </p>
           ) : null}
         </form>
@@ -133,10 +159,10 @@ export default function GraphPage() {
             style={{ flex: 1 }}
             value={query}
             onChange={(ev) => setQuery(ev.target.value)}
-            placeholder="Search entities"
+            placeholder="搜索实体"
           />
           <button className="btn" type="submit">
-            Search
+            搜索
           </button>
         </form>
 
@@ -144,7 +170,7 @@ export default function GraphPage() {
 
         <div className="stack">
           {entities.length === 0 ? (
-            <p className="muted">No visible entities yet. Extract from a document first.</p>
+            <p className="muted">暂无可见实体。请先对文档执行抽取。</p>
           ) : (
             entities.map((ent) => (
               <button
@@ -156,7 +182,7 @@ export default function GraphPage() {
               >
                 <strong>{ent.name}</strong>
                 <div className="muted">
-                  {ent.type} · {ent.mention_count} mention(s)
+                  {TYPE_LABEL[ent.type] || ent.type} · {ent.mention_count} 次提及
                 </div>
               </button>
             ))
@@ -165,35 +191,35 @@ export default function GraphPage() {
       </section>
 
       <aside className="panel drawer stack">
-        <h2>Entity</h2>
+        <h2>实体详情</h2>
         {!selected ? (
-          <p className="muted">Select an entity to inspect aliases, evidence, and neighbors.</p>
+          <p className="muted">选择实体以查看别名、证据与邻接关系。</p>
         ) : (
           <>
             <div>
               <h3 style={{ margin: 0 }}>{selected.name}</h3>
               <p className="muted">
-                {selected.type}
-                {selected.aliases.length ? ` · aliases: ${selected.aliases.join(", ")}` : ""}
+                {TYPE_LABEL[selected.type] || selected.type}
+                {selected.aliases.length ? ` · 别名：${selected.aliases.join("、")}` : ""}
               </p>
             </div>
             <div>
-              <h3>Mentions</h3>
+              <h3>提及</h3>
               {selected.mentions.length === 0 ? (
-                <p className="muted">No mentions</p>
+                <p className="muted">暂无提及</p>
               ) : (
                 selected.mentions.map((m) => (
                   <div className="citation" key={m.id}>
                     <p>{m.mention_text}</p>
-                    <small className="muted">doc {m.document_id.slice(0, 8)}…</small>
+                    <small className="muted">文档 {m.document_id.slice(0, 8)}…</small>
                   </div>
                 ))
               )}
             </div>
             <div>
-              <h3>Neighbors</h3>
+              <h3>邻接关系</h3>
               {!neighbors || neighbors.edges.length === 0 ? (
-                <p className="muted">No relations in ACL scope.</p>
+                <p className="muted">当前 ACL 范围内无关系。</p>
               ) : (
                 neighbors.edges.map((e) => {
                   const nodes = [neighbors.center, ...neighbors.nodes];
