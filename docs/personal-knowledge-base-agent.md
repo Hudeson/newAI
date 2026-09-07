@@ -505,7 +505,7 @@ s3://{bucket}/{tenant_id}/exports/{export_id}.zip
 ### M5 — 规模与智能增强
 
 - [ ] 多区域 / 只读副本
-- [ ] 知识图谱、多模态
+- [ ] 知识图谱（设计：[`knowledge-graph.md`](./knowledge-graph.md)；计划：[`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md)）、多模态
 - [ ] 质量评测门禁接入 CI
 - [ ] 成本优化（小模型摘要、缓存、批处理）
 
