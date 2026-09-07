@@ -18,7 +18,7 @@ run-api:
 	PYTHONPATH=packages:apps uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 
 run-web:
-	cd apps/web && npm run dev -- --port 3000
+	cd apps/web && npm run dev -- --hostname 0.0.0.0 --port 3000
 
 migrate:
 	mkdir -p data
@@ -27,9 +27,16 @@ migrate:
 compose-up:
 	docker compose -f deploy/compose/docker-compose.yml up -d
 
+local-deploy:
+	./scripts/local-deploy.sh
+
 e0-verify: install lint test
 	@echo "E0 regression gate passed"
 
 e6-verify: test
 	cd apps/web && npm run build
 	@echo "E6 regression gate passed"
+
+m4-verify: lint test
+	cd apps/web && npm run build
+	@echo "M4 regression gate passed"

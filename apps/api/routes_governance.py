@@ -3,9 +3,13 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from shared.audit_export import create_audit_export, get_audit_export, read_export_bytes
 from shared.db import get_db
 from shared.db.models import AuditEvent, TenantQuota, UploadJob
+from shared.errors import AppError, ErrorCode
+from shared.policy import list_policies, upsert_policy
 from shared.quota import list_quotas, set_quota, usage_summary
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -156,3 +160,99 @@ def list_failed_jobs(
         )
         for r in rows
     ]
+
+
+class ModelPolicyOut(BaseModel):
+    sensitivity: str
+    provider: str
+    model: str
+
+
+class ModelPolicyUpdate(BaseModel):
+    sensitivity: str = Field(pattern=r"^L[1-4]$")
+    provider: str = Field(min_length=1, max_length=64)
+    model: str = Field(min_length=1, max_length=64)
+
+
+class AuditExportOut(BaseModel):
+    id: str
+    status: str
+    event_count: int
+    object_key: str
+    download_url: str
+
+
+@router.get("/admin/models/policy", response_model=list[ModelPolicyOut])
+def get_model_policy(
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ModelPolicyOut]:
+    rows = list_policies(db, tenant_id=auth.tenant_id)
+    return [
+        ModelPolicyOut(sensitivity=r.sensitivity, provider=r.provider, model=r.model) for r in rows
+    ]
+
+
+@router.put("/admin/models/policy", response_model=list[ModelPolicyOut])
+def put_model_policy(
+    body: list[ModelPolicyUpdate],
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> list[ModelPolicyOut]:
+    updated = []
+    for item in body:
+        updated.append(
+            upsert_policy(
+                db,
+                tenant_id=auth.tenant_id,
+                sensitivity=item.sensitivity,
+                provider=item.provider,
+                model=item.model,
+            )
+        )
+    db.add(
+        AuditEvent(
+            tenant_id=auth.tenant_id,
+            actor_id=auth.user_id,
+            action="admin.models.policy.updated",
+            resource_type="model_route_policy",
+            resource_id=auth.tenant_id,
+            detail=json.dumps([b.model_dump() for b in body]),
+        )
+    )
+    return [
+        ModelPolicyOut(sensitivity=r.sensitivity, provider=r.provider, model=r.model)
+        for r in updated
+    ]
+
+
+@router.post("/admin/audit-exports", response_model=AuditExportOut)
+def post_audit_export(
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AuditExportOut:
+    export = create_audit_export(db, tenant_id=auth.tenant_id, user_id=auth.user_id)
+    return AuditExportOut(
+        id=export.id,
+        status=export.status,
+        event_count=export.event_count,
+        object_key=export.object_key,
+        download_url=f"/v1/admin/audit-exports/{export.id}/download",
+    )
+
+
+@router.get("/admin/audit-exports/{export_id}/download")
+def download_audit_export(
+    export_id: str,
+    auth: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> Response:
+    export = get_audit_export(db, tenant_id=auth.tenant_id, export_id=export_id)
+    if export is None:
+        raise AppError(ErrorCode.NOT_FOUND, "audit export not found", status_code=404)
+    data = read_export_bytes(export)
+    return Response(
+        content=data,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="audit-{export.id}.json"'},
+    )

@@ -28,6 +28,7 @@ export type KbDocument = {
   workspace_id: string;
   title: string;
   status: string;
+  sensitivity?: string;
   created_by: string;
   chunk_count: number;
 };
@@ -121,6 +122,29 @@ export type Connector = {
   status: string;
   config: Record<string, unknown>;
   permission_mode: string;
+};
+
+export type ModelPolicy = {
+  sensitivity: string;
+  provider: string;
+  model: string;
+};
+
+export type PendingApproval = {
+  report_id: string;
+  document_id: string;
+  workspace_id: string;
+  title: string;
+  status: string;
+  summary: string;
+};
+
+export type AuditExport = {
+  id: string;
+  status: string;
+  event_count: number;
+  object_key: string;
+  download_url: string;
 };
 
 export class ApiError extends Error {
@@ -221,6 +245,50 @@ export const api = {
       method: "POST",
       token,
     });
+  },
+
+  publishLearning(token: string, documentId: string, status: "draft" | "published") {
+    return apiFetch<LearningReport>(`/v1/documents/${documentId}/learning/publish`, {
+      method: "POST",
+      token,
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  updateWorkspace(token: string, workspaceId: string, publishMode: "auto" | "approval") {
+    return apiFetch<Workspace>(`/v1/workspaces/${workspaceId}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ publish_mode: publishMode }),
+    });
+  },
+
+  pendingApprovals(token: string) {
+    return apiFetch<PendingApproval[]>("/v1/admin/approvals/pending", { token });
+  },
+
+  modelPolicy(token: string) {
+    return apiFetch<ModelPolicy[]>("/v1/admin/models/policy", { token });
+  },
+
+  updateModelPolicy(token: string, body: ModelPolicy[]) {
+    return apiFetch<ModelPolicy[]>("/v1/admin/models/policy", {
+      method: "PUT",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  setSensitivity(token: string, documentId: string, sensitivity: string) {
+    return apiFetch<KbDocument>(`/v1/documents/${documentId}/sensitivity`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ sensitivity }),
+    });
+  },
+
+  createAuditExport(token: string) {
+    return apiFetch<AuditExport>("/v1/admin/audit-exports", { method: "POST", token });
   },
 
   ask(token: string, question: string, limit = 5) {
