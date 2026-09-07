@@ -1,7 +1,7 @@
 # 执行计划（从设计到可运行竖切）
 
-> 状态：E0–E7 竖切已落地（至治理/连接器骨架）；后续按 M4/M5 加深。  
-> 依据：[`technical-architecture.md`](./technical-architecture.md)、[`checklist.md`](./checklist.md)、[`data-model.md`](./data-model.md)、[`api-contracts.md`](./api-contracts.md)。
+> 状态：E0–E7、M4、Real-LLM 已落地；**M5 知识图谱处于 KG.0（设计定稿）**，实现见 [`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md)。  
+> 依据：[`technical-architecture.md`](./technical-architecture.md)、[`checklist.md`](./checklist.md)、[`data-model.md`](./data-model.md)、[`api-contracts.md`](./api-contracts.md)、[`knowledge-graph.md`](./knowledge-graph.md)。
 
 ---
 
@@ -60,7 +60,7 @@
 | E6 | 前端可用 | Next.js 上传/状态/简单问答 | E5 |
 | E7 | 治理与企业件 | 配额、Agent、SCIM、连接器… | E6 |
 
-**当前执行焦点：E0 → E4（对应 checklist M0 剩余 + M1）。**
+**当前执行焦点：M5 知识图谱 KG.1（存储 + 抽取）**；设计见 [`knowledge-graph.md`](./knowledge-graph.md)。
 
 ---
 
@@ -295,3 +295,18 @@ docs/               # 已有设计
 - 多区域 DR 落地  
 - 计费/发票  
 - 替换主文档已定技术栈（除非 E0 评审改 ADR）
+
+---
+
+## 16. M5 知识图谱进度
+
+| 阶段 | 状态 | 文档 |
+|------|------|------|
+| KG.0 详细设计与计划 | **完成** | [`knowledge-graph.md`](./knowledge-graph.md)、[`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md) |
+| KG.1 存储 + 抽取 | 待开工 | 实现分支建议 `cursor/m5-knowledge-graph-4365` |
+| KG.2 查询 + ACL | 待开工 | |
+| KG.3 Ask 增强 | 待开工 | |
+| KG.4 前端 | 待开工 | |
+| KG.5 门禁 | 待开工 | `M5-kg-review.md` |
+
+**设计锁定**：SQL 邻接表优先、列表 UI 优先、图谱作为 RAG 增强（默认关闭）、租户/ACL 强制、抽取复用 Real-LLM Gateway；Neo4j/大画布/多模态实体不在本里程碑。
