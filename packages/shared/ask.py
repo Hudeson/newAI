@@ -92,7 +92,7 @@ def ask(
         )
         if graph_blocks:
             context_blocks = [
-                "[Knowledge graph]\n" + b for b in graph_blocks
+                "[知识图谱]\n" + b for b in graph_blocks
             ] + context_blocks
 
     # Route by highest sensitivity among cited documents (L4 > L1).

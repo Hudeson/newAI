@@ -881,10 +881,10 @@ def serialize_graph_context(
             limit=20,
         )
         if ng is None or not ng.edges:
-            blocks.append(f"Entity: {ent.name} ({ent.type})")
+            blocks.append(f"实体：{ent.name}（{ent.type}）")
             continue
         by_id = {ent.id: ent, **{n.id: n for n in ng.nodes}}
-        lines = [f"Entity: {ent.name} ({ent.type})"]
+        lines = [f"实体：{ent.name}（{ent.type}）"]
         for edge in ng.edges:
             s = by_id.get(edge.subject_entity_id)
             o = by_id.get(edge.object_entity_id)

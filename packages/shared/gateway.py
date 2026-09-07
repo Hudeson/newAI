@@ -34,13 +34,13 @@ def local_extractive_answer(
     model: str,
 ) -> CompletionResult:
     if not context_blocks:
-        text = "I could not find authorized evidence for that question."
+        text = "未找到与该问题相关的授权证据。"
     else:
         bullets = "\n".join(f"- {b.strip()}" for b in context_blocks[:5] if b.strip())
-        prefix = "[local] "
+        prefix = "[本地] "
         text = (
-            f"{prefix}Based on your authorized knowledge base:\n{bullets}\n\n"
-            f"(Question: {prompt.strip()[:240]} · route={provider}/{model})"
+            f"{prefix}基于你有权访问的知识库：\n{bullets}\n\n"
+            f"（问题：{prompt.strip()[:240]} · 路由={provider}/{model}）"
         )
     return CompletionResult(
         text=text,
@@ -133,36 +133,36 @@ def build_ask_messages(*, prompt: str, context_blocks: list[str]) -> list[dict[s
         f"[{i + 1}] {b.strip()}" for i, b in enumerate(context_blocks[:8]) if b.strip()
     )
     system = (
-        "You are a knowledge-base assistant. Answer only from the provided evidence. "
-        "If evidence is insufficient, say you cannot find authorized evidence. "
-        "Cite evidence numbers like [1] when relevant."
+        "你是知识库助手。只能依据提供的证据作答。"
+        "若证据不足，请明确说明找不到授权证据。"
+        "相关时用 [1] 等形式标注证据编号。"
     )
-    user = f"Evidence:\n{evidence or '(none)'}\n\nQuestion: {prompt.strip()}"
+    user = f"证据：\n{evidence or '（无）'}\n\n问题：{prompt.strip()}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
 def build_learn_messages(*, text: str) -> list[dict[str, str]]:
     system = (
-        "You extract structured learning notes from a document. "
-        "Respond with JSON only: "
+        "你从文档中提取结构化学习笔记。"
+        "仅返回 JSON："
         '{"summary":"...","outline":["..."],"key_points":["..."]}.'
     )
-    user = f"Document:\n{text[:12000]}"
+    user = f"文档：\n{text[:12000]}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
 def build_graph_extract_messages(*, title: str, text: str) -> list[dict[str, str]]:
     system = (
-        "You extract a knowledge graph from a document chunk. "
-        "Respond with JSON only: "
+        "你从文档分块中抽取知识图谱。"
+        "仅返回 JSON："
         '{"entities":[{"name":"...","type":"person|organization|product|concept|'
         'location|event|document_ref|other","aliases":["..."]}],'
         '"relations":[{"subject":"...","predicate":"related_to|part_of|works_at|'
         'authored_by|depends_on|defines|references|located_in|occurs_in|synonym_of",'
         '"object":"...","evidence":"..."}]}.'
-        " Use only facts present in the text. Prefer controlled types and predicates."
+        " 只使用文本中的事实，优先使用受控类型与谓词。"
     )
-    user = f"Title: {title or '(untitled)'}\n\nChunk:\n{(text or '')[:8000]}"
+    user = f"标题：{title or '（无标题）'}\n\n分块：\n{(text or '')[:8000]}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 def ping_provider(
