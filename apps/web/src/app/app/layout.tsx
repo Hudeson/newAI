@@ -9,6 +9,7 @@ const links = [
   { href: "/app", label: "Library" },
   { href: "/app/ask", label: "Ask" },
   { href: "/app/members", label: "Members" },
+  { href: "/app/governance", label: "Governance" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

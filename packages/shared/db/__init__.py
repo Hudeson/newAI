@@ -15,7 +15,8 @@ def get_engine() -> Engine:
     global _engine, _SessionLocal
     if _engine is None:
         settings = get_settings()
-        connect_args = {"check_same_thread": False} if settings.sqlalchemy_url.startswith("sqlite") else {}
+        is_sqlite = settings.sqlalchemy_url.startswith("sqlite")
+        connect_args = {"check_same_thread": False} if is_sqlite else {}
         _engine = create_engine(settings.sqlalchemy_url, future=True, connect_args=connect_args)
         _SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False, future=True)
     return _engine

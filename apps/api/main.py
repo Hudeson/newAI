@@ -1,18 +1,22 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-from api.middleware import RequestIdMiddleware
-from api.routes_ask import router as ask_router
-from api.routes_auth import router as auth_router
-from api.routes_documents import router as documents_router
-from api.routes_learning import router as learning_router
-from api.routes_search import router as search_router
-from api.routes_uploads import router as uploads_router
 from shared.config import get_settings
 from shared.db import db_ping, init_db
 from shared.errors import AppError, ErrorCode
 from shared.logging import configure_logging, get_logger
+
+from api.middleware import RequestIdMiddleware
+from api.routes_agent import router as agent_router
+from api.routes_ask import router as ask_router
+from api.routes_auth import router as auth_router
+from api.routes_connectors import router as connectors_router
+from api.routes_documents import router as documents_router
+from api.routes_governance import router as governance_router
+from api.routes_learning import router as learning_router
+from api.routes_scim import router as scim_router
+from api.routes_search import router as search_router
+from api.routes_uploads import router as uploads_router
 
 configure_logging()
 logger = get_logger("api")
@@ -31,6 +35,7 @@ app.add_middleware(
         "http://localhost:3001",
         "http://127.0.0.1:3001",
     ],
+    allow_origin_regex=r"https://.*\.trycloudflare\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -41,6 +46,10 @@ app.include_router(documents_router)
 app.include_router(search_router)
 app.include_router(learning_router)
 app.include_router(ask_router)
+app.include_router(governance_router)
+app.include_router(agent_router)
+app.include_router(connectors_router)
+app.include_router(scim_router)
 
 
 @app.on_event("startup")
@@ -97,6 +106,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "E6",
+        "milestone": "E7",
         "request_id": getattr(request.state, "request_id", ""),
     }

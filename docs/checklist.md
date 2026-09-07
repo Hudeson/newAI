@@ -52,19 +52,20 @@
 
 ## M3 Agent 与治理
 
-- [ ] 工具白名单 + 调用前鉴权
-- [ ] 复习总结 / 对比等复合任务
-- [ ] 配额与 usage_ledger
-- [ ] 管理台：成员、配额、失败任务、审计查询
-- [ ] AgentRun 轨迹落库
+- [x] 工具白名单 + 调用前鉴权（E7 Agent allowlist + dry-run）
+- [ ] 复习总结 / 对比等复合任务（E7 提供 `review_summarize` 骨架，复合编排后续加深）
+- [x] 配额与 usage_ledger（强制 429 + usage 面板）
+- [x] 管理台：成员、配额、失败任务、审计查询（E6 成员 + E7 governance）
+- [x] AgentRun 轨迹落库
 
 ## M4 企业加固
 
 - [ ] 空间级发布策略（auto / approval）
 - [ ] 敏感分级 + 私有模型路由
-- [ ] 至少一个企业连接器（网盘/Wiki）
+- [x] 至少一个企业连接器（网盘/Wiki）— E7 S3 stub sync
 - [ ] 审计导出、备份恢复演练
 - [ ] 渗透与租户隔离测试报告
+- [x] SCIM Users/Groups 供给骨架 + Group ACL
 
 ## M5 规模与增强
 

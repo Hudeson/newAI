@@ -4,15 +4,16 @@ import json
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.acl import can_read_document
 from shared.db import get_db
 from shared.db.models import Document, LearningReport
 from shared.errors import AppError, ErrorCode
 from shared.learn import learn_document
+from shared.quota import enforce_operation_quota
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["learning"])
 
@@ -83,6 +84,7 @@ def trigger_learn(
         db, tenant_id=auth.tenant_id, user_id=auth.user_id, document_id=document_id
     ):
         raise AppError(ErrorCode.NOT_FOUND, "document not found", status_code=404)
+    enforce_operation_quota(db, tenant_id=auth.tenant_id, operation="learn")
     try:
         result = learn_document(
             db,

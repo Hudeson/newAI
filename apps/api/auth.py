@@ -8,13 +8,12 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import Depends, Header
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from shared.config import get_settings
 from shared.db import get_db
 from shared.db.models import User
 from shared.errors import AppError, ErrorCode
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 def hash_password(password: str) -> str:

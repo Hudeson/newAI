@@ -2,12 +2,11 @@ import inspect
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from shared.ask import validate_citations
 from shared.config import get_settings
 from shared.db import get_session_factory, init_db, reset_engine
 from shared.db.models import LearningReport, UsageLedger
+from sqlalchemy import select
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:
@@ -38,7 +37,13 @@ def _register(client: TestClient, slug: str, email: str) -> dict:
     return resp.json()
 
 
-def _upload_indexed(client: TestClient, headers: dict, workspace_id: str, filename: str, text: str) -> dict:
+def _upload_indexed(
+    client: TestClient,
+    headers: dict,
+    workspace_id: str,
+    filename: str,
+    text: str,
+) -> dict:
     presign = client.post(
         "/v1/uploads/presign",
         headers=headers,

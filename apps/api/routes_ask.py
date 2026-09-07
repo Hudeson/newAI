@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from shared.ask import ask as run_ask
+from shared.db import get_db
+from shared.db.models import UsageLedger
+from shared.quota import enforce_operation_quota
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.auth import AuthContext, get_current_auth
-from shared.ask import ask as run_ask
-from shared.db import get_db
-from shared.db.models import UsageLedger
 
 router = APIRouter(prefix="/v1", tags=["ask"])
 
@@ -48,6 +49,7 @@ def ask(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> AskResponse:
+    enforce_operation_quota(db, tenant_id=auth.tenant_id, operation="ask")
     result = run_ask(
         db,
         tenant_id=auth.tenant_id,

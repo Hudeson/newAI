@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from shared.acl import grant_default_acl
 from shared.db.models import AuditEvent, Chunk, Document, DocumentVersion, UploadJob
 from shared.ingest import chunk_text, embed_text, tokenize
 from shared.logging import get_logger
 from shared.storage import get_storage
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 logger = get_logger("worker.pipeline")
 
@@ -92,15 +91,23 @@ def process_upload_job(db: Session, job_id: str, *, actor_id: str | None = None)
         db.flush()
 
         # E5: auto-learn after index (personal/team local path).
+        from shared.errors import AppError, ErrorCode
         from shared.learn import learn_document
+        from shared.quota import enforce_operation_quota
 
-        learn_document(
-            db,
-            tenant_id=job.tenant_id,
-            document_id=job.document_id,
-            version_id=job.version_id,
-            actor_id=actor_id or job.created_by,
-        )
+        try:
+            enforce_operation_quota(db, tenant_id=job.tenant_id, operation="learn")
+            learn_document(
+                db,
+                tenant_id=job.tenant_id,
+                document_id=job.document_id,
+                version_id=job.version_id,
+                actor_id=actor_id or job.created_by,
+            )
+        except AppError as exc:
+            if exc.code != ErrorCode.QUOTA_EXCEEDED:
+                raise
+            logger.info("auto_learn_skipped_quota", job_id=job.id)
 
         logger.info("job_indexed", job_id=job.id, chunks=len(pieces))
         return ProcessResult(

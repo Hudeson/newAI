@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr, Field
+from shared.db import get_db
+from shared.db.models import AuditEvent, Tenant, User, Workspace
+from shared.errors import AppError, ErrorCode
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -13,9 +16,6 @@ from api.auth import (
     require_admin,
     verify_password,
 )
-from shared.db import get_db
-from shared.db.models import AuditEvent, Tenant, User, Workspace
-from shared.errors import AppError, ErrorCode
 
 router = APIRouter(prefix="/v1", tags=["auth"])
 
