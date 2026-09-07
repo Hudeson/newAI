@@ -33,8 +33,11 @@ export default function MembersPage() {
 
   return (
     <section className="panel stack">
-      <h1>成员</h1>
-      <p className="muted">当前租户成员名册（只读）。</p>
+      <div>
+        <div className="page-kicker">组织</div>
+        <h1>成员</h1>
+        <p className="muted">当前租户成员名册（只读）。</p>
+      </div>
       {error ? <div className="error">{error}</div> : null}
       <table className="table">
         <thead>

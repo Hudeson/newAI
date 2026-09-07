@@ -34,20 +34,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           Atrium <span>KB</span>
         </div>
         <nav className="nav">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={pathname === l.href ? "active" : undefined}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const active =
+              l.href === "/app"
+                ? pathname === "/app"
+                : pathname === l.href || pathname.startsWith(`${l.href}/`);
+            return (
+              <Link key={l.href} href={l.href} className={active ? "active" : undefined}>
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="stack" style={{ marginTop: "auto" }}>
-          <div className="muted" style={{ color: "rgba(238,246,243,0.65)" }}>
-            {me?.display_name || me?.email}
-            <br />
+        <div className="stack" style={{ marginTop: "auto", gap: 12 }}>
+          <div className="muted" style={{ color: "rgba(244,247,245,0.62)", padding: "0 10px" }}>
+            <div style={{ color: "#f4f7f5", fontWeight: 600 }}>{me?.display_name || me?.email}</div>
             <small>{me?.role}</small>
           </div>
           <button className="btn ghost" onClick={logout} type="button">
@@ -58,7 +59,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="main">
         <div className="topbar">
           <div>
-            <div className="muted">工作区</div>
+            <div className="muted" style={{ fontSize: "0.78rem", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+              工作区
+            </div>
             <select
               className="select"
               value={workspaceId || ""}

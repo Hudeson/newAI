@@ -45,15 +45,19 @@ export default function RegisterPage() {
           <div className="brand">
             Atrium <span>KB</span>
           </div>
-          <h1>几分钟内搭建私有知识中庭。</h1>
-          <p style={{ color: "rgba(238,246,243,0.75)" }}>
-            一个租户、默认工作区，从第一天起就具备 ACL 能力。
+          <h1>为自己搭一座私有知识中庭。</h1>
+          <p style={{ color: "rgba(244,247,245,0.78)" }}>
+            一处租户、默认工作区，权限与引用从第一天就在线。
           </p>
         </div>
       </section>
       <section className="auth-panel">
         <form className="panel auth-card stack" onSubmit={onSubmit}>
-          <h2>创建租户</h2>
+          <div>
+            <div className="page-kicker">开始</div>
+            <h2>创建租户</h2>
+            <p className="muted">创建后即可上传文档并开始问答。</p>
+          </div>
           <label className="field">
             租户名称
             <input

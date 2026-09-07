@@ -115,12 +115,15 @@ export default function GraphPage() {
   return (
     <div className="split">
       <section className="panel stack">
-        <h1>知识图谱</h1>
-        <p className="muted">
-          从已入库文档抽取实体与关系。可见性遵循文档 ACL。
-        </p>
+        <div>
+          <div className="page-kicker">图谱</div>
+          <h1>知识图谱</h1>
+          <p className="muted">
+            从已入库文档抽取实体与关系。可见性遵循文档 ACL。
+          </p>
+        </div>
         {stats ? (
-          <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+          <div className="stat-row">
             <span className="badge ok">{stats.entities} 个实体</span>
             <span className="badge ok">{stats.relations} 条关系</span>
             <span className="badge ok">{stats.documents_covered} 篇文档</span>
@@ -191,7 +194,10 @@ export default function GraphPage() {
       </section>
 
       <aside className="panel drawer stack">
-        <h2>实体详情</h2>
+        <div>
+          <div className="page-kicker">详情</div>
+          <h2>实体</h2>
+        </div>
         {!selected ? (
           <p className="muted">选择实体以查看别名、证据与邻接关系。</p>
         ) : (

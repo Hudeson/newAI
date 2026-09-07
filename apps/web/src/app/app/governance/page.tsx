@@ -247,8 +247,11 @@ export default function GovernancePage() {
   return (
     <div className="stack" style={{ gap: 22 }}>
       <section className="panel stack">
-        <h1>治理</h1>
-        <p className="muted">模型密钥、路由策略、审批、配额、Agent 工具与连接器。</p>
+        <div>
+          <div className="page-kicker">控制台</div>
+          <h1>治理</h1>
+          <p className="muted">模型密钥、路由策略、审批、配额、Agent 工具与连接器。</p>
+        </div>
         {error ? <div className="error">{error}</div> : null}
       </section>
 

@@ -38,8 +38,11 @@ export default function AskPage() {
   return (
     <div className="split">
       <section className="panel stack">
-        <h1>问答</h1>
-        <p className="muted">回答仅基于当前租户 ACL 可见内容。点击回答可查看右侧引用。</p>
+        <div>
+          <div className="page-kicker">问答</div>
+          <h1>带着出处追问</h1>
+          <p className="muted">回答仅基于当前租户 ACL 可见内容。点击回答可查看右侧引用。</p>
+        </div>
         <div className="chat">
           {turns.map((t, idx) => (
             <div key={`${t.question}-${idx}`} className="stack">
@@ -84,8 +87,11 @@ export default function AskPage() {
         </form>
       </section>
 
-      <aside className="panel drawer">
-        <h2>引用</h2>
+      <aside className="panel drawer stack">
+        <div>
+          <div className="page-kicker">证据</div>
+          <h2>引用</h2>
+        </div>
         {!active || active.citations.length === 0 ? (
           <p className="muted">尚未选择引用。</p>
         ) : (

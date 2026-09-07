@@ -45,16 +45,19 @@ export default function LoginPage() {
           <div className="brand">
             Atrium <span>KB</span>
           </div>
-          <h1>你的知识，可检索、可追问、有出处。</h1>
-          <p className="muted" style={{ color: "rgba(238,246,243,0.75)" }}>
-            上传文档、生成学习总结，并在租户隔离下进行带引用的问答。
+          <h1>知识有处可栖，回答有据可依。</h1>
+          <p style={{ color: "rgba(244,247,245,0.78)" }}>
+            上传、学习、检索与追问，都在租户边界之内完成。
           </p>
         </div>
       </section>
       <section className="auth-panel">
         <form className="panel auth-card stack" onSubmit={onSubmit}>
-          <h2>登录</h2>
-          <p className="muted">请输入租户标识与账号。</p>
+          <div>
+            <div className="page-kicker">欢迎回来</div>
+            <h2>登录</h2>
+            <p className="muted">使用租户标识与账号进入工作区。</p>
+          </div>
           <label className="field">
             租户标识
             <input
@@ -86,7 +89,7 @@ export default function LoginPage() {
           </label>
           {error ? <div className="error">{error}</div> : null}
           <button className="btn accent" disabled={busy} type="submit">
-            {busy ? "登录中…" : "进入"}
+            {busy ? "登录中…" : "进入中庭"}
           </button>
           <p className="muted">
             新租户？ <Link href="/register">创建工作区</Link>

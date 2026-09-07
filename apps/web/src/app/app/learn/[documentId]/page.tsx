@@ -80,6 +80,7 @@ export default function LearnPage() {
         </Link>
       </div>
       <section className="panel">
+        <div className="page-kicker">学习</div>
         <h1>{doc?.title || "学习报告"}</h1>
         <p className="muted">
           状态：{REPORT_STATUS[report?.status || ""] || report?.status || "—"} · 模型：
