@@ -14,7 +14,12 @@ ACL-aware RAG, and auditable tool-using agents. `personal` / `team` /
 
 ## Current milestone
 
-**M4 — Enterprise hardening** (approval publish, sensitivity routing, audit export)
+**Real-LLM** — OpenAI-compatible / Ollama gateway + Governance API Key UI
+
+## Configure model key
+
+1. UI: `/app/governance` → **模型与密钥（API Key）**
+2. Or `.env`: `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` (see `.env.example`)
 
 ## Quick start (local deploy)
 

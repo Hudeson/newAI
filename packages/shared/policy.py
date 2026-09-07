@@ -8,10 +8,10 @@ from sqlalchemy.orm import Session
 from shared.db.models import ModelRoutePolicy
 
 DEFAULT_ROUTES: dict[str, tuple[str, str]] = {
-    "L1": ("local", "local-extractive"),
-    "L2": ("local", "local-extractive"),
-    "L3": ("local-private", "local-private-extractive"),
-    "L4": ("local-private", "local-private-extractive"),
+    "L1": ("openai_compatible", "gpt-4o-mini"),
+    "L2": ("openai_compatible", "gpt-4o-mini"),
+    "L3": ("ollama", "llama3.2"),
+    "L4": ("ollama", "llama3.2"),
 }
 
 VALID_SENSITIVITY = set(DEFAULT_ROUTES)

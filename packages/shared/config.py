@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     cors_origins: str = ""
     cors_origin_regex: str = r"https://.*\.trycloudflare\.com"
 
+    # Real LLM gateway (OpenAI-compatible + Ollama)
+    llm_provider: str = "local"  # local | openai_compatible | ollama
+    llm_base_url: str = "https://api.openai.com/v1"
+    llm_api_key: str = ""
+    llm_model: str = "gpt-4o-mini"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "llama3.2"
+    llm_timeout_seconds: float = 60.0
+    credentials_secret: str = ""
+
     @property
     def sqlalchemy_url(self) -> str:
         return self.database_url

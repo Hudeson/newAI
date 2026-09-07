@@ -102,6 +102,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "M4",
+        "milestone": "Real-LLM",
         "request_id": getattr(request.state, "request_id", ""),
     }

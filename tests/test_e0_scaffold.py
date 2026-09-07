@@ -49,6 +49,7 @@ def test_readyz_and_meta(tmp_path: Path, monkeypatch):
     "E6",
     "E7",
     "M4",
+    "Real-LLM",
 }
     assert meta.json()["request_id"]
 

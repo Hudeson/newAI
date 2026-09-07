@@ -315,3 +315,21 @@ class AuditExport(Base):
     event_count: Mapped[int] = mapped_column(default=0)
     detail_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class LlmCredential(Base):
+    __tablename__ = "llm_credentials"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "provider", name="uq_llm_cred_tenant_provider"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(500), default="")
+    default_model: Mapped[str] = mapped_column(String(128), default="")
+    api_key_sealed: Mapped[str] = mapped_column(Text, default="")
+    key_prefix: Mapped[str] = mapped_column(String(32), default="")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
