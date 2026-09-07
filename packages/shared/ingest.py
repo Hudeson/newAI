@@ -4,7 +4,6 @@ import hashlib
 import math
 import re
 
-
 _TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff]+", re.UNICODE)
 
 

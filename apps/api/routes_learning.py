@@ -4,16 +4,16 @@ import json
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.acl import can_read_document
 from shared.db import get_db
 from shared.db.models import Document, LearningReport
 from shared.errors import AppError, ErrorCode
 from shared.learn import learn_document
 from shared.quota import enforce_operation_quota
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["learning"])
 

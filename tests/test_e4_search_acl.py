@@ -2,7 +2,6 @@ import inspect
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-
 from shared.config import get_settings
 from shared.db import init_db, reset_engine
 from shared.search import search_chunks
@@ -36,7 +35,13 @@ def _register(client: TestClient, slug: str, email: str) -> dict:
     return resp.json()
 
 
-def _upload_indexed(client: TestClient, headers: dict, workspace_id: str, filename: str, text: str) -> dict:
+def _upload_indexed(
+    client: TestClient,
+    headers: dict,
+    workspace_id: str,
+    filename: str,
+    text: str,
+) -> dict:
     presign = client.post(
         "/v1/uploads/presign",
         headers=headers,

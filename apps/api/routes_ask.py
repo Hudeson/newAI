@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.ask import ask as run_ask
 from shared.db import get_db
 from shared.db.models import UsageLedger
 from shared.quota import enforce_operation_quota
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["ask"])
 

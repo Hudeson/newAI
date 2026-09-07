@@ -69,7 +69,14 @@ def _call_search(db: Session, *, tenant_id: str, user_id: str, goal: str, dry_ru
     }
 
 
-def _call_learning(db: Session, *, tenant_id: str, user_id: str, document_ids: list[str], dry_run: bool) -> dict:
+def _call_learning(
+    db: Session,
+    *,
+    tenant_id: str,
+    user_id: str,
+    document_ids: list[str],
+    dry_run: bool,
+) -> dict:
     if dry_run:
         return {"planned": True, "document_ids": document_ids[:1]}
     if not document_ids:
@@ -92,7 +99,14 @@ def _call_learning(db: Session, *, tenant_id: str, user_id: str, document_ids: l
     }
 
 
-def _call_review(db: Session, *, tenant_id: str, goal: str, snippets: list[str], dry_run: bool) -> dict:
+def _call_review(
+    db: Session,
+    *,
+    tenant_id: str,
+    goal: str,
+    snippets: list[str],
+    dry_run: bool,
+) -> dict:
     if dry_run:
         return {"planned": True, "goal": goal}
     joined = " ".join(snippets)[:800] or goal
@@ -150,7 +164,13 @@ def run_agent(
             status = "dry_run" if dry_run else "ok"
             inp = {"document_ids": doc_ids[:3]}
         elif tool == "review_summarize":
-            out = _call_review(db, tenant_id=tenant_id, goal=goal, snippets=snippets, dry_run=dry_run)
+            out = _call_review(
+                db,
+                tenant_id=tenant_id,
+                goal=goal,
+                snippets=snippets,
+                dry_run=dry_run,
+            )
             status = "dry_run" if dry_run else "ok"
             inp = {"goal": goal}
         elif tool in DANGEROUS_TOOLS:

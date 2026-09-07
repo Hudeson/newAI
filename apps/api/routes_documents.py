@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth, require_admin
 from shared.acl import can_read_document, replace_document_acl
 from shared.db import get_db
 from shared.db.models import Chunk, Document, DocumentAcl
 from shared.errors import AppError, ErrorCode
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth, require_admin
 
 router = APIRouter(prefix="/v1", tags=["documents"])
 

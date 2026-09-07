@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
+from shared.db import get_db
+from shared.db.models import Group, GroupMember, User
+from shared.errors import AppError, ErrorCode
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.auth import AuthContext, decode_token, hash_password, require_admin
-from shared.db import get_db
-from shared.db.models import Group, GroupMember, User
-from shared.errors import AppError, ErrorCode
 
 router = APIRouter(prefix="/scim/v2", tags=["scim"])
 

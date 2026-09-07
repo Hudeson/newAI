@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-
 from shared.config import get_settings
 from shared.db import init_db, reset_engine
 

@@ -11,7 +11,6 @@ from shared.db.models import AuditEvent, Chunk, Document, LearningReport, Worksp
 from shared.ingest import tokenize
 from shared.llm import record_usage
 
-
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
 
 

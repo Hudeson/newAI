@@ -2,6 +2,7 @@
 
 from shared.db import get_session_factory, init_db
 from shared.logging import configure_logging, get_logger
+
 from workers.pipeline import claim_queued_jobs, process_upload_job
 
 configure_logging()

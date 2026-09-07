@@ -4,11 +4,11 @@ import json
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
+from shared.connectors import create_connector, list_connectors, sync_connector
+from shared.db import get_db
 from sqlalchemy.orm import Session
 
 from api.auth import AuthContext, get_current_auth, require_admin
-from shared.connectors import create_connector, list_connectors, sync_connector
-from shared.db import get_db
 
 router = APIRouter(prefix="/v1", tags=["connectors"])
 

@@ -4,14 +4,14 @@ import json
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.agent import ALL_TOOLS, DEFAULT_ALLOWLIST, get_agent_run, list_tool_calls, run_agent
 from shared.db import get_db
 from shared.db.models import Workspace
 from shared.errors import AppError, ErrorCode
 from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["agent"])
 

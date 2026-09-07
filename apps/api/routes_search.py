@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.db import get_db
 from shared.db.models import AuditEvent
 from shared.llm import record_usage
 from shared.quota import enforce_operation_quota
 from shared.search import search_chunks
+from sqlalchemy.orm import Session
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["search"])
 

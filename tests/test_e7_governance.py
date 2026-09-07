@@ -1,12 +1,10 @@
-import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from shared.config import get_settings
 from shared.db import get_session_factory, init_db, reset_engine
 from shared.db.models import AgentRun, AgentToolCall, DocumentAcl, Group, GroupMember
+from sqlalchemy import select
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:

@@ -1,12 +1,11 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from shared.config import get_settings
 from shared.db import get_session_factory, init_db, reset_engine
 from shared.db.models import AuditEvent, Chunk, DocumentAcl
 from shared.ingest import chunk_text, cosine, embed_text
+from sqlalchemy import select
 
 
 def _client(tmp_path: Path, monkeypatch) -> TestClient:

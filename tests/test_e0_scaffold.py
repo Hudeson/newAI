@@ -1,10 +1,9 @@
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from shared.config import get_settings
 from shared.db import get_session_factory, init_db, reset_engine
+from sqlalchemy import select
 
 
 def _fresh_db(tmp_path: Path, monkeypatch) -> None:

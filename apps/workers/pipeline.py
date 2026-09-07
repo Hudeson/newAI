@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from shared.acl import grant_default_acl
 from shared.db.models import AuditEvent, Chunk, Document, DocumentVersion, UploadJob
 from shared.ingest import chunk_text, embed_text, tokenize
 from shared.logging import get_logger
 from shared.storage import get_storage
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 logger = get_logger("worker.pipeline")
 

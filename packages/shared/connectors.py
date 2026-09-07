@@ -21,7 +21,6 @@ from shared.errors import AppError, ErrorCode
 from shared.ingest import chunk_text, embed_text, tokenize
 from shared.storage import get_storage
 
-
 SUPPORTED_TYPES = {"s3"}
 
 
@@ -76,7 +75,12 @@ def create_connector(
     return row
 
 
-def list_connectors(db: Session, *, tenant_id: str, workspace_id: str | None = None) -> list[ConnectorInstance]:
+def list_connectors(
+    db: Session,
+    *,
+    tenant_id: str,
+    workspace_id: str | None = None,
+) -> list[ConnectorInstance]:
     stmt = select(ConnectorInstance).where(ConnectorInstance.tenant_id == tenant_id)
     if workspace_id:
         stmt = stmt.where(ConnectorInstance.workspace_id == workspace_id)
@@ -200,7 +204,9 @@ def sync_connector(
         run.items_seen = 1
         run.items_imported = 1
         run.status = "completed"
-        run.detail_json = json.dumps({"document_id": doc_id, "object_key": sample_key, "bucket": bucket})
+        run.detail_json = json.dumps(
+            {"document_id": doc_id, "object_key": sample_key, "bucket": bucket}
+        )
         connector.status = "idle"
         connector.updated_at = datetime.now(UTC)
         db.add(

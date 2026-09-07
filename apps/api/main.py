@@ -1,6 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from shared.config import get_settings
+from shared.db import db_ping, init_db
+from shared.errors import AppError, ErrorCode
+from shared.logging import configure_logging, get_logger
 
 from api.middleware import RequestIdMiddleware
 from api.routes_agent import router as agent_router
@@ -13,10 +17,6 @@ from api.routes_learning import router as learning_router
 from api.routes_scim import router as scim_router
 from api.routes_search import router as search_router
 from api.routes_uploads import router as uploads_router
-from shared.config import get_settings
-from shared.db import db_ping, init_db
-from shared.errors import AppError, ErrorCode
-from shared.logging import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger("api")

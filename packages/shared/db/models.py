@@ -206,7 +206,9 @@ class TenantQuota(Base):
 
 class Group(Base):
     __tablename__ = "groups"
-    __table_args__ = (UniqueConstraint("tenant_id", "external_id", name="uq_groups_tenant_external"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "external_id", name="uq_groups_tenant_external"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)

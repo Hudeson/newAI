@@ -4,17 +4,17 @@ import json
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from api.auth import AuthContext, get_current_auth
 from shared.config import get_settings
 from shared.db import get_db
 from shared.db.models import AuditEvent, Document, DocumentVersion, UploadJob, Workspace
 from shared.errors import AppError, ErrorCode
 from shared.quota import enforce_quota
 from shared.storage import get_storage
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 from workers.pipeline import process_upload_job
+
+from api.auth import AuthContext, get_current_auth
 
 router = APIRouter(prefix="/v1", tags=["uploads"])
 
