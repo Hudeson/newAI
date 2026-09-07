@@ -9,6 +9,7 @@ from api.auth import AuthContext, get_current_auth
 from shared.ask import ask as run_ask
 from shared.db import get_db
 from shared.db.models import UsageLedger
+from shared.quota import enforce_operation_quota
 
 router = APIRouter(prefix="/v1", tags=["ask"])
 
@@ -48,6 +49,7 @@ def ask(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> AskResponse:
+    enforce_operation_quota(db, tenant_id=auth.tenant_id, operation="ask")
     result = run_ask(
         db,
         tenant_id=auth.tenant_id,

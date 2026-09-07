@@ -80,6 +80,49 @@ export type UserOut = {
   status: string;
 };
 
+export type UsageMeter = {
+  meter: string;
+  limit: number;
+  used: number;
+  remaining: number;
+  window: string;
+};
+
+export type Quota = {
+  meter: string;
+  limit: number;
+  window: string;
+};
+
+export type AgentToolCall = {
+  id: string;
+  tool_name: string;
+  status: string;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+};
+
+export type AgentRun = {
+  id: string;
+  workspace_id: string;
+  goal: string;
+  status: string;
+  dry_run: boolean;
+  allowlist: string[];
+  answer: string;
+  tool_calls: AgentToolCall[];
+};
+
+export type Connector = {
+  id: string;
+  workspace_id: string;
+  type: string;
+  name: string;
+  status: string;
+  config: Record<string, unknown>;
+  permission_mode: string;
+};
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -186,6 +229,62 @@ export const api = {
       token,
       body: JSON.stringify({ question, limit }),
     });
+  },
+
+  usageSummary(token: string) {
+    return apiFetch<UsageMeter[]>("/v1/usage/summary", { token });
+  },
+
+  quotas(token: string) {
+    return apiFetch<Quota[]>("/v1/admin/quotas", { token });
+  },
+
+  updateQuotas(token: string, body: { meter: string; limit: number; window?: string }[]) {
+    return apiFetch<Quota[]>("/v1/admin/quotas", {
+      method: "PUT",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  agentRun(
+    token: string,
+    body: {
+      workspace_id: string;
+      goal: string;
+      tool_allowlist?: string[];
+      dry_run?: boolean;
+      max_steps?: number;
+    },
+  ) {
+    return apiFetch<AgentRun>("/v1/agent/runs", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  connectors(token: string, workspaceId?: string) {
+    const q = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+    return apiFetch<Connector[]>(`/v1/connectors${q}`, { token });
+  },
+
+  createConnector(
+    token: string,
+    body: { workspace_id: string; type: string; name: string; config?: Record<string, unknown> },
+  ) {
+    return apiFetch<Connector>("/v1/connectors", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  syncConnector(token: string, connectorId: string) {
+    return apiFetch<{ id: string; status: string; items_imported: number }>(
+      `/v1/connectors/${connectorId}/sync`,
+      { method: "POST", token },
+    );
   },
 
   async uploadFile(token: string, workspaceId: string, file: File): Promise<UploadJob> {

@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 from api.auth import AuthContext, get_current_auth
 from shared.db import get_db
 from shared.db.models import AuditEvent
+from shared.llm import record_usage
+from shared.quota import enforce_operation_quota
 from shared.search import search_chunks
 
 router = APIRouter(prefix="/v1", tags=["search"])
@@ -38,12 +40,24 @@ def search(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> SearchResponse:
+    enforce_operation_quota(db, tenant_id=auth.tenant_id, operation="search")
     hits = search_chunks(
         db,
         tenant_id=auth.tenant_id,
         user_id=auth.user_id,
         query=body.query,
         limit=body.limit,
+    )
+    record_usage(
+        db,
+        tenant_id=auth.tenant_id,
+        user_id=auth.user_id,
+        operation="search",
+        provider="local",
+        model="search",
+        input_tokens=max(len(body.query.split()), 1),
+        output_tokens=len(hits),
+        detail={"hit_count": len(hits)},
     )
     db.add(
         AuditEvent(

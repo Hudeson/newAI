@@ -1,6 +1,6 @@
 # 执行计划（从设计到可运行竖切）
 
-> 状态：设计文档已齐；本计划用于指导**编码落地**。  
+> 状态：E0–E7 竖切已落地（至治理/连接器骨架）；后续按 M4/M5 加深。  
 > 依据：[`technical-architecture.md`](./technical-architecture.md)、[`checklist.md`](./checklist.md)、[`data-model.md`](./data-model.md)、[`api-contracts.md`](./api-contracts.md)。
 
 ---

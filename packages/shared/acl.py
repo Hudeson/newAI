@@ -3,12 +3,22 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from shared.db.models import DocumentAcl, Workspace
+from shared.db.models import DocumentAcl, GroupMember, Workspace
 
 
 def list_workspace_ids(db: Session, *, tenant_id: str) -> list[str]:
     rows = db.scalars(
         select(Workspace.id).where(Workspace.tenant_id == tenant_id, Workspace.status == "active")
+    ).all()
+    return list(rows)
+
+
+def list_group_ids_for_user(db: Session, *, tenant_id: str, user_id: str) -> list[str]:
+    rows = db.scalars(
+        select(GroupMember.group_id).where(
+            GroupMember.tenant_id == tenant_id,
+            GroupMember.user_id == user_id,
+        )
     ).all()
     return list(rows)
 
@@ -52,6 +62,7 @@ def readable_document_ids(
 ) -> set[str]:
     if workspace_ids is None:
         workspace_ids = list_workspace_ids(db, tenant_id=tenant_id)
+    group_ids = set(list_group_ids_for_user(db, tenant_id=tenant_id, user_id=user_id))
     rows = db.scalars(
         select(DocumentAcl).where(
             DocumentAcl.tenant_id == tenant_id,
@@ -64,6 +75,8 @@ def readable_document_ids(
         if acl.principal_type == "user" and acl.principal_id == user_id:
             allowed.add(acl.document_id)
         elif acl.principal_type == "workspace" and acl.principal_id in ws:
+            allowed.add(acl.document_id)
+        elif acl.principal_type == "group" and acl.principal_id in group_ids:
             allowed.add(acl.document_id)
     return allowed
 

@@ -12,6 +12,7 @@ from shared.config import get_settings
 from shared.db import get_db
 from shared.db.models import AuditEvent, Document, DocumentVersion, UploadJob, Workspace
 from shared.errors import AppError, ErrorCode
+from shared.quota import enforce_quota
 from shared.storage import get_storage
 from workers.pipeline import process_upload_job
 
@@ -83,6 +84,12 @@ def presign_upload(
     db: Session = Depends(get_db),
 ) -> PresignResponse:
     _workspace(db, auth, body.workspace_id)
+    enforce_quota(
+        db,
+        tenant_id=auth.tenant_id,
+        meter="upload_bytes",
+        amount=max(body.size_bytes, 1),
+    )
 
     if body.idempotency_key:
         existing = db.scalar(

@@ -190,3 +190,98 @@ class UsageLedger(Base):
     output_tokens: Mapped[int] = mapped_column(default=0)
     detail: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TenantQuota(Base):
+    __tablename__ = "tenant_quotas"
+    __table_args__ = (UniqueConstraint("tenant_id", "meter", name="uq_tenant_quota_meter"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    meter: Mapped[str] = mapped_column(String(64), nullable=False)
+    limit_value: Mapped[int] = mapped_column(default=0)
+    window: Mapped[str] = mapped_column(String(32), default="day")  # day|lifetime
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Group(Base):
+    __tablename__ = "groups"
+    __table_args__ = (UniqueConstraint("tenant_id", "external_id", name="uq_groups_tenant_external"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(200), default="")
+    source: Mapped[str] = mapped_column(String(32), default="local")  # local|scim
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GroupMember(Base):
+    __tablename__ = "group_members"
+    __table_args__ = (UniqueConstraint("group_id", "user_id", name="uq_group_member"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    group_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgentRun(Base):
+    __tablename__ = "agent_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    goal: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    dry_run: Mapped[int] = mapped_column(default=0)
+    allowlist_json: Mapped[str] = mapped_column(Text, default="[]")
+    answer: Mapped[str] = mapped_column(Text, default="")
+    detail_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgentToolCall(Base):
+    __tablename__ = "agent_tool_calls"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    run_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ok")  # ok|denied|dry_run|error
+    input_json: Mapped[str] = mapped_column(Text, default="{}")
+    output_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConnectorInstance(Base):
+    __tablename__ = "connector_instances"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(64), nullable=False)  # s3
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="idle")
+    config_json: Mapped[str] = mapped_column(Text, default="{}")
+    permission_mode: Mapped[str] = mapped_column(String(64), default="owner_workspace")
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ConnectorSyncRun(Base):
+    __tablename__ = "connector_sync_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    connector_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    items_seen: Mapped[int] = mapped_column(default=0)
+    items_imported: Mapped[int] = mapped_column(default=0)
+    error_message: Mapped[str] = mapped_column(Text, default="")
+    detail_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
