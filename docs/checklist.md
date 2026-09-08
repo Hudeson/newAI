@@ -74,11 +74,38 @@
 - [ ] OpenSearch（如需要）
 - [ ] **知识图谱** — 设计 [`knowledge-graph.md`](./knowledge-graph.md)；计划 [`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md)
   - [x] KG.0 详细设计与执行计划
-  - [ ] KG.1 存储 + 抽取骨架
-  - [ ] KG.2 查询 API + ACL
-  - [ ] KG.3 Ask 图谱增强
-  - [ ] KG.4 前端 `/app/graph`
-  - [ ] KG.5 review + checklist 关闭 [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md)（实现后补）
+  - [x] KG.1 存储 + 抽取骨架
+  - [x] KG.2 查询 API + ACL
+  - [x] KG.3 Ask 图谱增强
+  - [x] KG.4 前端 `/app/graph`
+  - [x] KG.5 review + checklist 关闭 [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md)
 - [ ] 多模态
 - [ ] 质量评测门禁接入 CI
 - [ ] 成本优化（小模型摘要、缓存、批处理）
+
+## OPT 对照教程优化（检索与摄入）
+
+> 对照：[DeepSeek V3 个人知识库教程](https://cloud.baidu.com/article/3559904)  
+> 方案：[`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)
+
+- [x] OPT.0 差距分析与完整链路计划
+- [ ] OPT.1 真 Embedding + Qdrant
+- [ ] OPT.2 混合检索（语义 + 关键词）
+- [ ] OPT.3 PDF / DOCX 摄入
+- [ ] OPT.4 Ask SSE + DeepSeek 一键档
+- [ ] OPT.5 增量重嵌 + 评测门禁 CI
+- [ ] OPT.6 加密加固 / 多模态
+
+## WIKI LLM Wiki 编译层（Karpathy）
+
+> 理念设计：[`llm-wiki-design.md`](./llm-wiki-design.md)  
+> 与原方案对照：[`llm-wiki-comparison.md`](./llm-wiki-comparison.md)  
+> 默认 Schema：[`wiki-schema-default.md`](./wiki-schema-default.md)
+
+- [x] WIKI.0 完善设计文档
+- [ ] WIKI.1 Schema + 表结构
+- [ ] WIKI.2 Ingest → source/index/log
+- [ ] WIKI.3 entity/concept + links
+- [ ] WIKI.4 Ask wiki 检索 + 归档
+- [ ] WIKI.5 Lint + `/app/wiki`
+- [ ] WIKI.6 监督审批 + KG 投影

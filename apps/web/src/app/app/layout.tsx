@@ -6,10 +6,11 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 
 const links = [
-  { href: "/app", label: "Library" },
-  { href: "/app/ask", label: "Ask" },
-  { href: "/app/members", label: "Members" },
-  { href: "/app/governance", label: "Governance" },
+  { href: "/app", label: "文库" },
+  { href: "/app/ask", label: "问答" },
+  { href: "/app/graph", label: "知识图谱" },
+  { href: "/app/members", label: "成员" },
+  { href: "/app/governance", label: "治理" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,7 +24,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [loading, token, router]);
 
   if (loading || !token) {
-    return <main className="main">Loading workspace…</main>;
+    return <main className="main">正在加载工作区…</main>;
   }
 
   return (
@@ -33,31 +34,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           Atrium <span>KB</span>
         </div>
         <nav className="nav">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={pathname === l.href ? "active" : undefined}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {links.map((l) => {
+            const active =
+              l.href === "/app"
+                ? pathname === "/app"
+                : pathname === l.href || pathname.startsWith(`${l.href}/`);
+            return (
+              <Link key={l.href} href={l.href} className={active ? "active" : undefined}>
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="stack" style={{ marginTop: "auto" }}>
-          <div className="muted" style={{ color: "rgba(238,246,243,0.65)" }}>
-            {me?.display_name || me?.email}
-            <br />
+        <div className="stack" style={{ marginTop: "auto", gap: 12 }}>
+          <div className="muted" style={{ color: "rgba(244,247,245,0.62)", padding: "0 10px" }}>
+            <div style={{ color: "#f4f7f5", fontWeight: 600 }}>{me?.display_name || me?.email}</div>
             <small>{me?.role}</small>
           </div>
           <button className="btn ghost" onClick={logout} type="button">
-            Sign out
+            退出登录
           </button>
         </div>
       </aside>
       <div className="main">
         <div className="topbar">
           <div>
-            <div className="muted">Workspace</div>
+            <div className="muted" style={{ fontSize: "0.78rem", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+              工作区
+            </div>
             <select
               className="select"
               value={workspaceId || ""}

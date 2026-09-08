@@ -9,10 +9,10 @@ import { useAuth } from "@/lib/auth";
 export default function RegisterPage() {
   const { setSession } = useAuth();
   const router = useRouter();
-  const [tenantName, setTenantName] = useState("Acme Knowledge");
-  const [tenantSlug, setTenantSlug] = useState("acme");
-  const [displayName, setDisplayName] = useState("Admin");
-  const [email, setEmail] = useState("admin@acme.example");
+  const [tenantName, setTenantName] = useState("我的知识库");
+  const [tenantSlug, setTenantSlug] = useState("my-kb");
+  const [displayName, setDisplayName] = useState("管理员");
+  const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,7 +32,7 @@ export default function RegisterPage() {
       await setSession(tok.access_token);
       router.push("/app");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Register failed");
+      setError(err instanceof ApiError ? err.message : "注册失败");
     } finally {
       setBusy(false);
     }
@@ -45,17 +45,21 @@ export default function RegisterPage() {
           <div className="brand">
             Atrium <span>KB</span>
           </div>
-          <h1>Stand up a private knowledge atrium in minutes.</h1>
-          <p style={{ color: "rgba(238,246,243,0.75)" }}>
-            One tenant, one default workspace, ACL-ready from day one.
+          <h1>为自己搭一座私有知识中庭。</h1>
+          <p style={{ color: "rgba(244,247,245,0.78)" }}>
+            一处租户、默认工作区，权限与引用从第一天就在线。
           </p>
         </div>
       </section>
       <section className="auth-panel">
         <form className="panel auth-card stack" onSubmit={onSubmit}>
-          <h2>Create tenant</h2>
+          <div>
+            <div className="page-kicker">开始</div>
+            <h2>创建租户</h2>
+            <p className="muted">创建后即可上传文档并开始问答。</p>
+          </div>
           <label className="field">
-            Tenant name
+            租户名称
             <input
               value={tenantName}
               onChange={(e) => setTenantName(e.target.value)}
@@ -63,7 +67,7 @@ export default function RegisterPage() {
             />
           </label>
           <label className="field">
-            Tenant slug
+            租户标识
             <input
               value={tenantSlug}
               onChange={(e) => setTenantSlug(e.target.value)}
@@ -72,14 +76,14 @@ export default function RegisterPage() {
             />
           </label>
           <label className="field">
-            Your name
+            你的姓名
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
             />
           </label>
           <label className="field">
-            Email
+            邮箱
             <input
               type="email"
               value={email}
@@ -88,7 +92,7 @@ export default function RegisterPage() {
             />
           </label>
           <label className="field">
-            Password
+            密码
             <input
               type="password"
               value={password}
@@ -99,10 +103,10 @@ export default function RegisterPage() {
           </label>
           {error ? <div className="error">{error}</div> : null}
           <button className="btn accent" disabled={busy} type="submit">
-            {busy ? "Creating…" : "Create & enter"}
+            {busy ? "创建中…" : "创建并进入"}
           </button>
           <p className="muted">
-            Already have an account? <Link href="/login">Sign in</Link>
+            已有账号？ <Link href="/login">登录</Link>
           </p>
         </form>
       </section>

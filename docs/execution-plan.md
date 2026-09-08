@@ -60,7 +60,7 @@
 | E6 | 前端可用 | Next.js 上传/状态/简单问答 | E5 |
 | E7 | 治理与企业件 | 配额、Agent、SCIM、连接器… | E6 |
 
-**当前执行焦点：M5 知识图谱 KG.1（存储 + 抽取）**；设计见 [`knowledge-graph.md`](./knowledge-graph.md)。
+**当前执行焦点：OPT 检索与摄入升级（对照 DeepSeek 个人知识库教程）**；方案见 [`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)。
 
 ---
 
@@ -303,10 +303,37 @@ docs/               # 已有设计
 | 阶段 | 状态 | 文档 |
 |------|------|------|
 | KG.0 详细设计与计划 | **完成** | [`knowledge-graph.md`](./knowledge-graph.md)、[`milestones/M5-kg-plan.md`](./milestones/M5-kg-plan.md) |
-| KG.1 存储 + 抽取 | 待开工 | 实现分支建议 `cursor/m5-knowledge-graph-4365` |
-| KG.2 查询 + ACL | 待开工 | |
-| KG.3 Ask 增强 | 待开工 | |
-| KG.4 前端 | 待开工 | |
-| KG.5 门禁 | 待开工 | `M5-kg-review.md` |
+| KG.1 存储 + 抽取 | **完成** | migration `0007` + `shared/graph.py` + extract API |
+| KG.2 查询 + ACL | **完成** | entities/neighbors/relations/stats |
+| KG.3 Ask 增强 | **完成** | `graph_augment` |
+| KG.4 前端 | **完成** | `/app/graph` + Ask 开关 |
+| KG.5 门禁 | **完成** | [`milestones/M5-kg-review.md`](./milestones/M5-kg-review.md) |
 
 **设计锁定**：SQL 邻接表优先、列表 UI 优先、图谱作为 RAG 增强（默认关闭）、租户/ACL 强制、抽取复用 Real-LLM Gateway；Neo4j/大画布/多模态实体不在本里程碑。
+
+---
+
+## 17. OPT 对照教程优化进度
+
+| 阶段 | 状态 | 文档 |
+|------|------|------|
+| OPT.0 方案与完整链路 | **完成** | [`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md) |
+| OPT.1 Embed + Qdrant | 待开工 | 建议分支 `cursor/opt1-embeddings-qdrant-4365` |
+| OPT.2 Hybrid 检索 | 待开工 | |
+| OPT.3 PDF/DOCX | 待开工 | |
+| OPT.4 SSE / DeepSeek 档 | 待开工 | |
+| OPT.5 增量 + 评测 CI | 待开工 | |
+| OPT.6 加密 / 多模态 | 待开工 | |
+
+**不照搬：** 本地 DeepSeek V3 全量权重 + LoRA 微调不作默认路径；用 Gateway 接 DeepSeek API，优先补真向量与混合检索。
+
+---
+
+## 18. LLM Wiki 进度
+
+| 阶段 | 状态 | 文档 |
+|------|------|------|
+| WIKI.0 设计 | **完成** | [`llm-wiki-design.md`](./llm-wiki-design.md)、[`wiki-schema-default.md`](./wiki-schema-default.md) |
+| WIKI.1–6 实现 | 待开工 | 建议分支 `cursor/wiki-compile-layer-4365` |
+
+**理念锁定：** Raw 不可变 · Wiki 由 LLM 维护 · Schema 共进化 · Ingest/Query/Lint 三操作 · 与 RAG/ACL **互补**（Wiki-primary 综合 + Chunk 级引用）。

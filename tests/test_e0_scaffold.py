@@ -50,6 +50,7 @@ def test_readyz_and_meta(tmp_path: Path, monkeypatch):
     "E7",
     "M4",
     "Real-LLM",
+    "Knowledge-Graph",
 }
     assert meta.json()["request_id"]
 

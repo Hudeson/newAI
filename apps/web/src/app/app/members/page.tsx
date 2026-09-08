@@ -4,6 +4,18 @@ import { useEffect, useState } from "react";
 import { api, ApiError, type UserOut } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+const ROLE_LABEL: Record<string, string> = {
+  admin: "管理员",
+  owner: "所有者",
+  member: "成员",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  active: "正常",
+  disabled: "已停用",
+  invited: "已邀请",
+};
+
 export default function MembersPage() {
   const { token, me } = useAuth();
   const [users, setUsers] = useState<UserOut[]>([]);
@@ -15,22 +27,25 @@ export default function MembersPage() {
       .users(token)
       .then(setUsers)
       .catch((err) =>
-        setError(err instanceof ApiError ? err.message : "Failed to load members"),
+        setError(err instanceof ApiError ? err.message : "加载成员失败"),
       );
   }, [token]);
 
   return (
     <section className="panel stack">
-      <h1>Members</h1>
-      <p className="muted">Read-only roster for the current tenant (E6.5).</p>
+      <div>
+        <div className="page-kicker">组织</div>
+        <h1>成员</h1>
+        <p className="muted">当前租户成员名册（只读）。</p>
+      </div>
       {error ? <div className="error">{error}</div> : null}
       <table className="table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
+            <th>姓名</th>
+            <th>邮箱</th>
+            <th>角色</th>
+            <th>状态</th>
           </tr>
         </thead>
         <tbody>
@@ -38,13 +53,13 @@ export default function MembersPage() {
             <tr key={u.user_id}>
               <td>
                 {u.display_name || "—"}
-                {u.user_id === me?.user_id ? " (you)" : ""}
+                {u.user_id === me?.user_id ? "（我）" : ""}
               </td>
               <td>{u.email}</td>
               <td>
-                <span className="badge">{u.role}</span>
+                <span className="badge">{ROLE_LABEL[u.role] || u.role}</span>
               </td>
-              <td>{u.status}</td>
+              <td>{STATUS_LABEL[u.status] || u.status}</td>
             </tr>
           ))}
         </tbody>

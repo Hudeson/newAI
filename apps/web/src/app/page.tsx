@@ -13,5 +13,5 @@ export default function HomePage() {
     router.replace(token ? "/app" : "/login");
   }, [loading, token, router]);
 
-  return <main className="main muted">Loading…</main>;
+  return <main className="main muted">加载中…</main>;
 }

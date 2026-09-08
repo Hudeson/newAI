@@ -95,7 +95,7 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)) -> TokenRespo
     )
     workspace = Workspace(
         tenant_id=tenant.id,
-        name="Default",
+        name="默认",
         slug="default",
         publish_mode="auto",
     )

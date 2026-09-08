@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from shared.ask import ask as run_ask
+from shared.config import get_settings
 from shared.db import get_db
 from shared.db.models import UsageLedger
 from shared.quota import enforce_operation_quota
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/v1", tags=["ask"])
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=5, ge=1, le=20)
+    graph_augment: bool | None = None
 
 
 class CitationOut(BaseModel):
@@ -32,6 +34,7 @@ class CitationOut(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     citations: list[CitationOut]
+    graph_augmented: bool = False
 
 
 class UsageOut(BaseModel):
@@ -50,12 +53,19 @@ def ask(
     db: Session = Depends(get_db),
 ) -> AskResponse:
     enforce_operation_quota(db, tenant_id=auth.tenant_id, operation="ask")
+    settings = get_settings()
+    graph_augment = (
+        settings.graph_ask_augment_default
+        if body.graph_augment is None
+        else body.graph_augment
+    )
     result = run_ask(
         db,
         tenant_id=auth.tenant_id,
         user_id=auth.user_id,
         question=body.question,
         limit=body.limit,
+        graph_augment=graph_augment,
     )
     return AskResponse(
         answer=result.answer,
@@ -71,6 +81,7 @@ def ask(
             )
             for c in result.citations
         ],
+        graph_augmented=result.graph_augmented,
     )
 
 

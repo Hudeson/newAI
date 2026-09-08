@@ -27,6 +27,7 @@ class Citation:
 class AskResult:
     answer: str
     citations: list[Citation]
+    graph_augmented: bool = False
 
 
 def validate_citations(
@@ -62,7 +63,10 @@ def ask(
     user_id: str,
     question: str,
     limit: int = 5,
+    graph_augment: bool = False,
 ) -> AskResult:
+    from shared.graph import serialize_graph_context
+
     hits: list[SearchHit] = search_chunks(
         db,
         tenant_id=tenant_id,
@@ -81,6 +85,16 @@ def ask(
     safe_hits = [h for h in hits if h.chunk_id in valid_ids]
 
     context_blocks = [h.content for h in safe_hits]
+    graph_blocks: list[str] = []
+    if graph_augment:
+        graph_blocks = serialize_graph_context(
+            db, tenant_id=tenant_id, user_id=user_id, question=question
+        )
+        if graph_blocks:
+            context_blocks = [
+                "[知识图谱]\n" + b for b in graph_blocks
+            ] + context_blocks
+
     # Route by highest sensitivity among cited documents (L4 > L1).
     sensitivity = "L2"
     if safe_hits:
@@ -125,9 +139,14 @@ def ask(
             detail=(
                 f'{{"question_len":{len(question)},'
                 f'"citation_count":{len(citations)},'
-                f'"answer_tokens":{len(tokenize(answer))}}}'
+                f'"answer_tokens":{len(tokenize(answer))},'
+                f'"graph_augmented":{str(bool(graph_augment and graph_blocks)).lower()}}}'
             ),
         )
     )
     db.flush()
-    return AskResult(answer=answer, citations=citations)
+    return AskResult(
+        answer=answer,
+        citations=citations,
+        graph_augmented=bool(graph_augment and graph_blocks),
+    )

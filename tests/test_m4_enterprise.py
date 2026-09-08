@@ -57,7 +57,7 @@ def _upload(client: TestClient, headers: dict, workspace_id: str, name: str, tex
 
 def test_meta_is_m4(tmp_path: Path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
-    assert client.get("/v1/meta").json()["milestone"] in {"M4", "Real-LLM"}
+    assert client.get("/v1/meta").json()["milestone"] in {"M4", "Real-LLM", "Knowledge-Graph"}
 
 
 def test_approval_publish_requires_admin(tmp_path: Path, monkeypatch):

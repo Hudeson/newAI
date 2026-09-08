@@ -30,9 +30,9 @@ export default function GovernancePage() {
   const [modelDraft, setModelDraft] = useState("deepseek-chat");
   const [providerDraft, setProviderDraft] = useState("openai_compatible");
   const [pingMsg, setPingMsg] = useState("");
-  const [goal, setGoal] = useState("Summarize ACL and quota policies");
+  const [goal, setGoal] = useState("总结 ACL 与配额策略");
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
-  const [connectorName, setConnectorName] = useState("Inbox S3");
+  const [connectorName, setConnectorName] = useState("收件箱 S3");
   const [exportMsg, setExportMsg] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
@@ -68,7 +68,7 @@ export default function GovernancePage() {
 
   useEffect(() => {
     refresh().catch((err) =>
-      setError(err instanceof ApiError ? err.message : "Failed to load governance"),
+      setError(err instanceof ApiError ? err.message : "加载治理页失败"),
     );
   }, [refresh]);
 
@@ -84,7 +84,7 @@ export default function GovernancePage() {
       setQuotas(next);
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Quota update failed");
+      setError(err instanceof ApiError ? err.message : "配额更新失败");
     } finally {
       setBusy("");
     }
@@ -104,7 +104,7 @@ export default function GovernancePage() {
       setAgentRun(run);
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Agent run failed");
+      setError(err instanceof ApiError ? err.message : "Agent 运行失败");
     } finally {
       setBusy("");
     }
@@ -124,7 +124,7 @@ export default function GovernancePage() {
       await api.syncConnector(token, created.id);
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Connector sync failed");
+      setError(err instanceof ApiError ? err.message : "连接器同步失败");
     } finally {
       setBusy("");
     }
@@ -140,7 +140,7 @@ export default function GovernancePage() {
       await refreshAuth();
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Publish mode update failed");
+      setError(err instanceof ApiError ? err.message : "发布模式更新失败");
     } finally {
       setBusy("");
     }
@@ -153,7 +153,7 @@ export default function GovernancePage() {
     try {
       setPolicies(await api.updateModelPolicy(token, policies));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Model policy update failed");
+      setError(err instanceof ApiError ? err.message : "模型策略更新失败");
     } finally {
       setBusy("");
     }
@@ -165,7 +165,7 @@ export default function GovernancePage() {
     setError("");
     try {
       const exp = await api.createAuditExport(token);
-      setExportMsg(`Export ${exp.id}: ${exp.event_count} events`);
+      setExportMsg(`导出 ${exp.id}：${exp.event_count} 条事件`);
       const res = await fetch(`${getApiBase()}${exp.download_url}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -177,7 +177,7 @@ export default function GovernancePage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Audit export failed");
+      setError(err instanceof ApiError ? err.message : "审计导出失败");
     } finally {
       setBusy("");
     }
@@ -190,7 +190,7 @@ export default function GovernancePage() {
       await api.publishLearning(token, documentId, "published");
       await refresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Approve failed");
+      setError(err instanceof ApiError ? err.message : "审批失败");
     } finally {
       setBusy("");
     }
@@ -209,9 +209,9 @@ export default function GovernancePage() {
       });
       setKeyDraft("");
       await refresh();
-      setPingMsg("Credential saved (key never re-displayed).");
+      setPingMsg("凭证已保存（密钥不会回显）。");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Save credential failed");
+      setError(err instanceof ApiError ? err.message : "保存凭证失败");
     } finally {
       setBusy("");
     }
@@ -228,23 +228,30 @@ export default function GovernancePage() {
         base_url: baseUrlDraft,
         api_key: keyDraft || undefined,
       });
-      setPingMsg(`Ping ok · ${res.provider}/${res.model} · ${res.preview}`);
+      setPingMsg(`连通成功 · ${res.provider}/${res.model} · ${res.preview}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Ping failed");
+      setError(err instanceof ApiError ? err.message : "连通测试失败");
     } finally {
       setBusy("");
     }
   }
 
   const isAdmin = me?.role === "admin" || me?.role === "owner";
+  const publishModeLabel =
+    currentWs?.publish_mode === "approval"
+      ? "审批发布"
+      : currentWs?.publish_mode === "auto"
+        ? "自动发布"
+        : currentWs?.publish_mode || "—";
 
   return (
     <div className="stack" style={{ gap: 22 }}>
       <section className="panel stack">
-        <h1>Governance</h1>
-        <p className="muted">
-          Model keys, routing, approvals, quotas, agent tools, and connectors.
-        </p>
+        <div>
+          <div className="page-kicker">控制台</div>
+          <h1>治理</h1>
+          <p className="muted">模型密钥、路由策略、审批、配额、Agent 工具与连接器。</p>
+        </div>
         {error ? <div className="error">{error}</div> : null}
       </section>
 
@@ -252,14 +259,14 @@ export default function GovernancePage() {
         <section className="panel stack">
           <h2>模型与密钥（API Key）</h2>
           <p className="muted">
-            配置 OpenAI 兼容端点（DeepSeek / OpenAI 等）或 Ollama。也可在服务器 `.env` 写
-            `LLM_API_KEY`。环境：
+            配置 OpenAI 兼容端点（DeepSeek / OpenAI 等）或 Ollama。也可在服务器 `.env` 写入
+            `LLM_API_KEY`。当前环境：
             {llmEnv
-              ? ` provider=${llmEnv.llm_provider}, env_key=${llmEnv.llm_key_configured ? "yes" : "no"}`
+              ? ` provider=${llmEnv.llm_provider}，环境密钥=${llmEnv.llm_key_configured ? "已配置" : "未配置"}`
               : " —"}
           </p>
           <label className="field">
-            Provider
+            提供商
             <select
               className="select"
               value={providerDraft}
@@ -280,7 +287,7 @@ export default function GovernancePage() {
             />
           </label>
           <label className="field">
-            Default model
+            默认模型
             <input
               className="input"
               value={modelDraft}
@@ -299,10 +306,10 @@ export default function GovernancePage() {
           </label>
           <div className="row">
             <button className="btn accent" type="button" disabled={busy === "llm"} onClick={saveCredential}>
-              Save credential
+              保存凭证
             </button>
             <button className="btn" type="button" disabled={busy === "ping"} onClick={pingLlm}>
-              Test connection
+              测试连接
             </button>
           </div>
           {pingMsg ? <p className="muted">{pingMsg}</p> : null}
@@ -310,9 +317,9 @@ export default function GovernancePage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Provider</th>
-                  <th>Model</th>
-                  <th>Key</th>
+                  <th>提供商</th>
+                  <th>模型</th>
+                  <th>密钥</th>
                 </tr>
               </thead>
               <tbody>
@@ -320,7 +327,7 @@ export default function GovernancePage() {
                   <tr key={c.provider}>
                     <td>{c.provider}</td>
                     <td>{c.default_model || "—"}</td>
-                    <td>{c.key_configured ? c.key_prefix : "not set"}</td>
+                    <td>{c.key_configured ? c.key_prefix : "未设置"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -331,25 +338,25 @@ export default function GovernancePage() {
 
       {isAdmin ? (
         <section className="panel stack">
-          <h2>Workspace publish mode</h2>
+          <h2>工作区发布模式</h2>
           <p className="muted">
-            Current: <span className="badge">{currentWs?.publish_mode || "—"}</span>
+            当前：<span className="badge">{publishModeLabel}</span>
           </p>
           <button className="btn accent" disabled={busy === "publish"} onClick={togglePublishMode} type="button">
-            Switch to {currentWs?.publish_mode === "approval" ? "auto" : "approval"}
+            切换为 {currentWs?.publish_mode === "approval" ? "自动发布" : "审批发布"}
           </button>
         </section>
       ) : null}
 
       {isAdmin ? (
         <section className="panel stack">
-          <h2>Pending approvals</h2>
-          {pending.length === 0 ? <p className="muted">No draft reports in approval workspaces.</p> : null}
+          <h2>待审批</h2>
+          {pending.length === 0 ? <p className="muted">审批模式下暂无草稿报告。</p> : null}
           <table className="table">
             <thead>
               <tr>
-                <th>Title</th>
-                <th>Summary</th>
+                <th>标题</th>
+                <th>摘要</th>
                 <th></th>
               </tr>
             </thead>
@@ -360,7 +367,7 @@ export default function GovernancePage() {
                   <td>{p.summary}</td>
                   <td>
                     <button className="btn accent" type="button" onClick={() => approve(p.document_id)}>
-                      Approve
+                      通过
                     </button>
                   </td>
                 </tr>
@@ -372,7 +379,7 @@ export default function GovernancePage() {
 
       {isAdmin ? (
         <section className="panel stack">
-          <h2>Model routing by sensitivity</h2>
+          <h2>按敏感级路由模型</h2>
           {policies.map((p, idx) => (
             <div key={p.sensitivity} className="row">
               <span className="badge">{p.sensitivity}</span>
@@ -397,31 +404,31 @@ export default function GovernancePage() {
             </div>
           ))}
           <button className="btn accent" disabled={busy === "policy"} onClick={savePolicies} type="button">
-            Save model policy
+            保存模型策略
           </button>
         </section>
       ) : null}
 
       {isAdmin ? (
         <section className="panel stack">
-          <h2>Audit export</h2>
+          <h2>审计导出</h2>
           <button className="btn accent" disabled={busy === "export"} onClick={exportAudit} type="button">
-            Export audit JSON
+            导出审计 JSON
           </button>
           {exportMsg ? <p className="muted">{exportMsg}</p> : null}
         </section>
       ) : null}
 
       <section className="panel stack">
-        <h2>Usage & quotas</h2>
+        <h2>用量与配额</h2>
         <table className="table">
           <thead>
             <tr>
-              <th>Meter</th>
-              <th>Used</th>
-              <th>Limit</th>
-              <th>Remaining</th>
-              <th>Window</th>
+              <th>指标</th>
+              <th>已用</th>
+              <th>上限</th>
+              <th>剩余</th>
+              <th>窗口</th>
             </tr>
           </thead>
           <tbody>
@@ -440,7 +447,7 @@ export default function GovernancePage() {
           <div className="stack">
             {quotas.map((q, idx) => (
               <label key={q.meter} className="field">
-                {q.meter} ({q.window})
+                {q.meter}（{q.window}）
                 <input
                   className="input"
                   type="number"
@@ -454,55 +461,58 @@ export default function GovernancePage() {
               </label>
             ))}
             <button className="btn accent" disabled={busy === "quotas"} onClick={saveQuotas} type="button">
-              Save quotas
+              保存配额
             </button>
           </div>
         ) : null}
       </section>
 
       <section className="panel stack">
-        <h2>Agent tools</h2>
+        <h2>Agent 工具</h2>
         <label className="field">
-          Goal
+          目标
           <textarea value={goal} onChange={(e) => setGoal(e.target.value)} />
         </label>
         <div className="row">
           <button className="btn" disabled={!!busy} onClick={() => runAgent(true)} type="button">
-            Dry-run
+            干跑
           </button>
           <button className="btn accent" disabled={!!busy} onClick={() => runAgent(false)} type="button">
-            Run agent
+            运行 Agent
           </button>
         </div>
         {agentRun ? (
           <div className="stack">
-            <div className="badge">{agentRun.status}{agentRun.dry_run ? " · dry-run" : ""}</div>
+            <div className="badge">
+              {agentRun.status}
+              {agentRun.dry_run ? " · 干跑" : ""}
+            </div>
             <p>{agentRun.answer}</p>
           </div>
         ) : null}
       </section>
 
       <section className="panel stack">
-        <h2>Connectors</h2>
+        <h2>连接器</h2>
         {isAdmin ? (
           <div className="row">
             <input
               className="input"
               value={connectorName}
               onChange={(e) => setConnectorName(e.target.value)}
-              placeholder="Connector name"
+              placeholder="连接器名称"
             />
             <button className="btn accent" disabled={busy === "connector"} onClick={createAndSync} type="button">
-              Create & sync S3
+              创建并同步 S3
             </button>
           </div>
         ) : null}
         <table className="table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Status</th>
+              <th>名称</th>
+              <th>类型</th>
+              <th>状态</th>
             </tr>
           </thead>
           <tbody>

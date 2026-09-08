@@ -71,6 +71,63 @@ export type Citation = {
 export type AskResponse = {
   answer: string;
   citations: Citation[];
+  graph_augmented?: boolean;
+};
+
+export type GraphStats = {
+  entities: number;
+  relations: number;
+  documents_covered: number;
+};
+
+export type GraphEntity = {
+  id: string;
+  type: string;
+  name: string;
+  canonical_name: string;
+  mention_count: number;
+  description?: string;
+};
+
+export type GraphMention = {
+  id: string;
+  document_id: string;
+  chunk_id: string;
+  mention_text: string;
+  confidence: number;
+};
+
+export type GraphEntityDetail = GraphEntity & {
+  aliases: string[];
+  mentions: GraphMention[];
+};
+
+export type GraphRelation = {
+  id: string;
+  subject_entity_id: string;
+  predicate: string;
+  object_entity_id: string;
+  confidence: number;
+  evidence_document_id: string | null;
+  evidence_chunk_id: string | null;
+};
+
+export type GraphNeighbors = {
+  center: GraphEntity;
+  nodes: GraphEntity[];
+  edges: GraphRelation[];
+};
+
+export type GraphJob = {
+  id: string;
+  document_id: string;
+  status: string;
+  chunks_total: number;
+  chunks_done: number;
+  entities_created: number;
+  relations_created: number;
+  error: string;
+  trigger: string;
 };
 
 export type UserOut = {
@@ -343,12 +400,41 @@ export const api = {
     );
   },
 
-  ask(token: string, question: string, limit = 5) {
+  ask(token: string, question: string, limit = 5, graphAugment = false) {
     return apiFetch<AskResponse>("/v1/ask", {
       method: "POST",
       token,
-      body: JSON.stringify({ question, limit }),
+      body: JSON.stringify({ question, limit, graph_augment: graphAugment }),
     });
+  },
+
+  graphStats(token: string) {
+    return apiFetch<GraphStats>("/v1/graph/stats", { token });
+  },
+
+  graphEntities(token: string, q?: string) {
+    const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+    return apiFetch<GraphEntity[]>(`/v1/graph/entities${qs}`, { token });
+  },
+
+  graphEntity(token: string, id: string) {
+    return apiFetch<GraphEntityDetail>(`/v1/graph/entities/${id}`, { token });
+  },
+
+  graphNeighbors(token: string, id: string) {
+    return apiFetch<GraphNeighbors>(`/v1/graph/entities/${id}/neighbors`, { token });
+  },
+
+  graphExtract(token: string, documentId: string, force = false) {
+    return apiFetch<GraphJob>("/v1/graph/extract", {
+      method: "POST",
+      token,
+      body: JSON.stringify({ document_id: documentId, force }),
+    });
+  },
+
+  graphJob(token: string, jobId: string) {
+    return apiFetch<GraphJob>(`/v1/graph/jobs/${jobId}`, { token });
   },
 
   usageSummary(token: string) {

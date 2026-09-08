@@ -11,6 +11,7 @@ from shared.db.models import UsageLedger
 from shared.gateway import (
     CompletionResult,
     build_ask_messages,
+    build_graph_extract_messages,
     build_learn_messages,
     local_extractive_answer,
     ollama_chat,
@@ -111,6 +112,11 @@ def gateway_complete(
     )
     if purpose == "learn":
         messages = build_learn_messages(text="\n\n".join(context_blocks) or prompt)
+    elif purpose == "graph_extract":
+        messages = build_graph_extract_messages(
+            title=prompt,
+            text="\n\n".join(context_blocks),
+        )
     else:
         messages = build_ask_messages(prompt=prompt, context_blocks=context_blocks)
 

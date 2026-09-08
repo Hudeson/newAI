@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -333,3 +333,84 @@ class LlmCredential(Base):
     status: Mapped[str] = mapped_column(String(32), default="active")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Entity(Base):
+    __tablename__ = "entities"
+    __table_args__ = (UniqueConstraint("tenant_id", "name_hash", name="uq_entities_tenant_hash"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(64), nullable=False, default="other")
+    name: Mapped[str] = mapped_column(String(500), nullable=False)
+    canonical_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    name_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    properties_json: Mapped[str] = mapped_column(Text, default="{}")
+    mention_count: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EntityAlias(Base):
+    __tablename__ = "entity_aliases"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "entity_id", "canonical_alias", name="uq_entity_alias"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    alias: Mapped[str] = mapped_column(String(500), nullable=False)
+    canonical_alias: Mapped[str] = mapped_column(String(500), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), default="extract")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EntityMention(Base):
+    __tablename__ = "entity_mentions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    chunk_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    mention_text: Mapped[str] = mapped_column(String(500), nullable=False)
+    start_offset: Mapped[int | None] = mapped_column(nullable=True)
+    end_offset: Mapped[int | None] = mapped_column(nullable=True)
+    confidence: Mapped[float] = mapped_column(default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Relation(Base):
+    __tablename__ = "relations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    subject_entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    predicate: Mapped[str] = mapped_column(String(64), nullable=False)
+    object_entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    attributes_json: Mapped[str] = mapped_column(Text, default="{}")
+    evidence_chunk_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    evidence_document_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    confidence: Mapped[float] = mapped_column(default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GraphExtractJob(Base):
+    __tablename__ = "graph_extract_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued")
+    chunks_total: Mapped[int] = mapped_column(default=0)
+    chunks_done: Mapped[int] = mapped_column(default=0)
+    entities_created: Mapped[int] = mapped_column(default=0)
+    relations_created: Mapped[int] = mapped_column(default=0)
+    error: Mapped[str] = mapped_column(Text, default="")
+    trigger: Mapped[str] = mapped_column(String(32), default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
