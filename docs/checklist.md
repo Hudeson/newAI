@@ -82,3 +82,16 @@
 - [ ] 多模态
 - [ ] 质量评测门禁接入 CI
 - [ ] 成本优化（小模型摘要、缓存、批处理）
+
+## OPT 对照教程优化（检索与摄入）
+
+> 对照：[DeepSeek V3 个人知识库教程](https://cloud.baidu.com/article/3559904)  
+> 方案：[`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)
+
+- [x] OPT.0 差距分析与完整链路计划
+- [ ] OPT.1 真 Embedding + Qdrant
+- [ ] OPT.2 混合检索（语义 + 关键词）
+- [ ] OPT.3 PDF / DOCX 摄入
+- [ ] OPT.4 Ask SSE + DeepSeek 一键档
+- [ ] OPT.5 增量重嵌 + 评测门禁 CI
+- [ ] OPT.6 加密加固 / 多模态
