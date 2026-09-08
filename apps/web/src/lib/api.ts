@@ -72,6 +72,16 @@ export type AskResponse = {
   answer: string;
   citations: Citation[];
   graph_augmented?: boolean;
+  web_search_augmented?: boolean;
+  web_citations?: {
+    title: string;
+    url: string;
+    snippet: string;
+    provider: string;
+    score?: number;
+    host?: string;
+    allowlisted?: boolean;
+  }[];
 };
 
 export type GraphStats = {
@@ -315,6 +325,30 @@ export type EduOfficialSyncResult = {
   error: string;
 };
 
+export type EduWebSearchResult = {
+  query: string;
+  provider: string;
+  hits: {
+    title: string;
+    url: string;
+    snippet: string;
+    provider: string;
+    score: number;
+    host: string;
+    allowlisted: boolean;
+  }[];
+  auto_import: boolean;
+  imports: {
+    job_id: string;
+    source_id: string;
+    pack_id: string;
+    status: string;
+    tutorials_imported: number;
+    questions_imported: number;
+    points_imported: number;
+  }[];
+};
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -494,11 +528,16 @@ export const api = {
     );
   },
 
-  ask(token: string, question: string, limit = 5, graphAugment = false) {
+  ask(token: string, question: string, limit = 5, graphAugment = false, webSearch = false) {
     return apiFetch<AskResponse>("/v1/ask", {
       method: "POST",
       token,
-      body: JSON.stringify({ question, limit, graph_augment: graphAugment }),
+      body: JSON.stringify({
+        question,
+        limit,
+        graph_augment: graphAugment,
+        web_search: webSearch,
+      }),
     });
   },
 
@@ -636,6 +675,26 @@ export const api = {
     },
   ) {
     return apiFetch<EduOfficialSyncResult>("/v1/edu/official/sync", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduWebSearch(
+    token: string,
+    body: {
+      query: string;
+      workspace_id: string;
+      subject?: string;
+      stage?: string;
+      grade?: number;
+      limit?: number;
+      auto_import?: boolean;
+      accept_license?: boolean;
+    },
+  ) {
+    return apiFetch<EduWebSearchResult>("/v1/edu/web-search", {
       method: "POST",
       token,
       body: JSON.stringify(body),

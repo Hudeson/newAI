@@ -119,6 +119,7 @@
 - [x] EDU.2 Explain 讲题 + 教材锚点 ACL + 相似题（结构）
 - [x] EDU.3 `/app/edu` 学习页（题库 / 讲题 / 练习）
 - [x] EDU.3.5 官网/授权源自动同步（白名单 + accept_license + fixture/live）
+- [x] EDU.3.6 自动联网搜索（白名单过滤 + 可自动入库；Ask 可选联网）
 - [ ] EDU.4 练习会话增强 + 向量相似题（依赖 OPT.1）
 - [ ] EDU.5 Wiki/KG 知识点对齐 + Lint
 - [ ] EDU.6 多学科扩展与平台内容订阅

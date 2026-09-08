@@ -65,6 +65,18 @@ class Settings(BaseSettings):
     edu_official_mode: str = "fixture"  # fixture | live
     edu_official_allow_hosts: str = ""
     edu_official_timeout_seconds: float = 30.0
+    edu_web_search_enabled: bool = True
+    edu_web_search_provider: str = ""  # empty → web_search_provider
+
+    # Web search (Ask + Education discovery)
+    web_search_enabled: bool = True
+    web_search_mode: str = "fixture"  # fixture | live
+    web_search_provider: str = "fixture"  # fixture | brave | bing | duckduckgo
+    web_search_timeout_seconds: float = 20.0
+    ask_web_search_default: bool = False
+    brave_search_api_key: str = ""
+    bing_search_api_key: str = ""
+    bing_search_endpoint: str = "https://api.bing.microsoft.com/v7.0/search"
 
     @property
     def sqlalchemy_url(self) -> str:

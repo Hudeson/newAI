@@ -11,6 +11,7 @@ import {
   type EduPoint,
   type EduPractice,
   type EduQuestion,
+  type EduWebSearchResult,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -68,6 +69,9 @@ export default function EduPage() {
   const [customFeedUrl, setCustomFeedUrl] = useState("");
   const [acceptLicense, setAcceptLicense] = useState(false);
   const [syncResult, setSyncResult] = useState<EduOfficialSyncResult | null>(null);
+  const [webQuery, setWebQuery] = useState("七年级有理数 教程 试题");
+  const [webAutoImport, setWebAutoImport] = useState(true);
+  const [webResult, setWebResult] = useState<EduWebSearchResult | null>(null);
 
   const pointName = useMemo(() => {
     const map = new Map(points.map((p) => [p.id, p.name]));
@@ -128,6 +132,31 @@ export default function EduPage() {
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "官网同步失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onWebSearch() {
+    if (!token || !workspaceId || !webQuery.trim()) return;
+    setBusy(true);
+    setError("");
+    setWebResult(null);
+    try {
+      const res = await api.eduWebSearch(token, {
+        query: webQuery.trim(),
+        workspace_id: workspaceId,
+        subject: "math",
+        stage: "junior",
+        grade: 7,
+        limit: 5,
+        auto_import: webAutoImport,
+        accept_license: acceptLicense,
+      });
+      setWebResult(res);
+      if (webAutoImport) await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "联网搜索失败");
     } finally {
       setBusy(false);
     }
@@ -216,6 +245,70 @@ export default function EduPage() {
       </header>
 
       {error ? <div className="error">{error}</div> : null}
+
+      <section className="panel">
+        <div>
+          <h2>自动联网搜索</h2>
+          <p className="muted">
+            在教育官网白名单内检索教程/试题；可自动入库。默认 fixture
+            演示；线上配置 WEB_SEARCH_MODE=live 与 Brave/Bing Key 或 duckduckgo。
+          </p>
+        </div>
+        <div className="stack" style={{ gap: 12, marginTop: 12 }}>
+          <label className="field">
+            搜索词
+            <input
+              value={webQuery}
+              onChange={(e) => setWebQuery(e.target.value)}
+              placeholder="例如：七年级有理数 课标 试题"
+            />
+          </label>
+          <label className="row" style={{ gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={acceptLicense}
+              onChange={(e) => setAcceptLicense(e.target.checked)}
+            />
+            <span>我确认来源为官方公开或已获授权，同意按声明许可入库</span>
+          </label>
+          <label className="row" style={{ gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={webAutoImport}
+              onChange={(e) => setWebAutoImport(e.target.checked)}
+            />
+            <span>搜索后自动导入白名单/结构化结果</span>
+          </label>
+          <button className="btn accent" type="button" disabled={busy} onClick={onWebSearch}>
+            {busy ? "搜索中…" : "联网搜索并入库"}
+          </button>
+          {webResult ? (
+            <div className="stack" style={{ gap: 8 }}>
+              <p className="muted">
+                查询：{webResult.query} · 提供方 {webResult.provider} · 命中{" "}
+                {webResult.hits.length}
+                {webResult.imports.length
+                  ? ` · 已导入 ${webResult.imports.length} 批`
+                  : ""}
+              </p>
+              <ul className="list-plain">
+                {webResult.hits.map((h) => (
+                  <li key={h.url}>
+                    <strong>{h.title}</strong>
+                    <div className="muted" style={{ fontSize: 13 }}>
+                      {h.snippet}
+                    </div>
+                    <small className="muted">
+                      {h.url}
+                      {h.allowlisted ? " · 白名单" : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       <section className="panel">
         <div>

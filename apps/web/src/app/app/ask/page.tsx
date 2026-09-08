@@ -17,6 +17,7 @@ export default function AskPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [graphAugment, setGraphAugment] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
 
   async function onAsk(e: FormEvent) {
     e.preventDefault();
@@ -24,7 +25,7 @@ export default function AskPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await api.ask(token, question.trim(), 5, graphAugment);
+      const result = await api.ask(token, question.trim(), 5, graphAugment, webSearch);
       setTurns((prev) => [...prev, { question: question.trim(), result }]);
       setActive(result);
       setQuestion("");
@@ -57,6 +58,7 @@ export default function AskPage() {
                 <div className="muted" style={{ marginTop: 8 }}>
                   {t.result.citations.length} 条引用 — 点击查看
                   {t.result.graph_augmented ? " · 已启用图谱增强" : ""}
+                  {t.result.web_search_augmented ? " · 已联网搜索" : ""}
                 </div>
               </button>
             </div>
@@ -80,6 +82,14 @@ export default function AskPage() {
             />
             <span>图谱增强（将实体邻域一并送入上下文）</span>
           </label>
+          <label className="row" style={{ gap: 8, alignItems: "center" }}>
+            <input
+              type="checkbox"
+              checked={webSearch}
+              onChange={(e) => setWebSearch(e.target.checked)}
+            />
+            <span>联网搜索（检索公开网页摘要增强回答）</span>
+          </label>
           {error ? <div className="error">{error}</div> : null}
           <button className="btn accent" type="submit" disabled={busy}>
             {busy ? "思考中…" : "带引用提问"}
@@ -92,19 +102,35 @@ export default function AskPage() {
           <div className="page-kicker">证据</div>
           <h2>引用</h2>
         </div>
-        {!active || active.citations.length === 0 ? (
+        {!active || (active.citations.length === 0 && !(active.web_citations && active.web_citations.length)) ? (
           <p className="muted">尚未选择引用。</p>
         ) : (
-          active.citations.map((c) => (
-            <div className="citation" key={c.chunk_id}>
-              <div className="row">
-                <span className="badge ok">#{c.ordinal}</span>
-                <span className="muted">相关度 {c.score.toFixed(3)}</span>
+          <>
+            {active.citations.map((c) => (
+              <div className="citation" key={c.chunk_id}>
+                <div className="row">
+                  <span className="badge ok">#{c.ordinal}</span>
+                  <span className="muted">相关度 {c.score.toFixed(3)}</span>
+                </div>
+                <p>{c.snippet}</p>
+                <small className="muted">文档 {c.document_id.slice(0, 8)}…</small>
               </div>
-              <p>{c.snippet}</p>
-              <small className="muted">文档 {c.document_id.slice(0, 8)}…</small>
-            </div>
-          ))
+            ))}
+            {(active.web_citations || []).map((w, i) => (
+              <div className="citation" key={`${w.url}-${i}`}>
+                <div className="row">
+                  <span className="badge ok">联网</span>
+                  <span className="muted">{w.provider}</span>
+                </div>
+                <p>
+                  <strong>{w.title}</strong>
+                  <br />
+                  {w.snippet}
+                </p>
+                <small className="muted">{w.url}</small>
+              </div>
+            ))}
+          </>
         )}
       </aside>
     </div>

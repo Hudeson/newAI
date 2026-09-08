@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from shared.db import get_db
 from shared.db.models import EduOfficialSyncJob
+from shared.edu_web_search import search_and_maybe_import
 from shared.edu_official import catalog_sources, get_source, sync_official_source
 from shared.education import (
     create_pack,
@@ -698,3 +699,70 @@ def api_official_jobs(
         )
         for j in rows
     ]
+
+
+class EduWebSearchIn(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
+    workspace_id: str = Field(min_length=1)
+    subject: str | None = None
+    stage: str | None = None
+    grade: int | None = None
+    limit: int = Field(default=5, ge=1, le=20)
+    auto_import: bool = False
+    accept_license: bool = False
+
+
+class EduWebHitOut(BaseModel):
+    title: str
+    url: str
+    snippet: str
+    provider: str
+    score: float = 0.0
+    host: str = ""
+    allowlisted: bool = False
+
+
+class EduWebImportOut(BaseModel):
+    job_id: str
+    source_id: str
+    pack_id: str
+    status: str
+    tutorials_imported: int
+    questions_imported: int
+    points_imported: int
+
+
+class EduWebSearchOut(BaseModel):
+    query: str
+    provider: str
+    hits: list[EduWebHitOut]
+    auto_import: bool
+    imports: list[EduWebImportOut]
+
+
+@router.post("/web-search", response_model=EduWebSearchOut)
+def api_edu_web_search(
+    body: EduWebSearchIn,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> EduWebSearchOut:
+    result = search_and_maybe_import(
+        db,
+        tenant_id=auth.tenant_id,
+        user_id=auth.user_id,
+        workspace_id=body.workspace_id,
+        query=body.query,
+        accept_license=body.accept_license,
+        auto_import=body.auto_import,
+        subject=body.subject,
+        stage=body.stage,
+        grade=body.grade,
+        limit=body.limit,
+    )
+    return EduWebSearchOut(
+        query=result["query"],
+        provider=result["provider"],
+        hits=[EduWebHitOut(**h) for h in result["hits"]],
+        auto_import=result["auto_import"],
+        imports=[EduWebImportOut(**i) for i in result["imports"]],
+    )

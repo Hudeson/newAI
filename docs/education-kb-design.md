@@ -339,6 +339,11 @@ Ask 扩展：`POST /v1/ask` 增加 `edu_question_id`；或独立 `POST /v1/edu/e
 | `EDU_OFFICIAL_MODE` | `fixture` | `fixture` 离线样例；`live` 才请求白名单 HTTP |
 | `EDU_OFFICIAL_ALLOW_HOSTS` | `` | 额外允许的官方域名（逗号分隔） |
 | `EDU_OFFICIAL_TIMEOUT_SECONDS` | `30` | |
+| `EDU_WEB_SEARCH_ENABLED` | `true` | 学习页自动联网搜索 |
+| `WEB_SEARCH_ENABLED` | `true` | Ask/教育联网总开关 |
+| `WEB_SEARCH_MODE` | `fixture` | `fixture` / `live` |
+| `WEB_SEARCH_PROVIDER` | `fixture` | `fixture` / `brave` / `bing` / `duckduckgo` |
+| `BRAVE_SEARCH_API_KEY` / `BING_SEARCH_API_KEY` | | live 提供方密钥 |
 
 ---
 
