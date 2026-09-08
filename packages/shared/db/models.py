@@ -529,3 +529,23 @@ class EduPracticeItem(Base):
     is_correct: Mapped[int | None] = mapped_column(Integer, nullable=True)
     explain_ask_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EduOfficialSyncJob(Base):
+    __tablename__ = "edu_official_sync_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    feed_url: Mapped[str] = mapped_column(Text, default="")
+    pack_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued")
+    tutorials_imported: Mapped[int] = mapped_column(Integer, default=0)
+    questions_imported: Mapped[int] = mapped_column(Integer, default=0)
+    points_imported: Mapped[int] = mapped_column(Integer, default=0)
+    detail_json: Mapped[str] = mapped_column(Text, default="{}")
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

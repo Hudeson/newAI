@@ -5,6 +5,8 @@ import {
   api,
   ApiError,
   type EduExplain,
+  type EduOfficialSource,
+  type EduOfficialSyncResult,
   type EduPack,
   type EduPoint,
   type EduPractice,
@@ -61,6 +63,11 @@ export default function EduPage() {
   const [gradeMsg, setGradeMsg] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [officialSources, setOfficialSources] = useState<EduOfficialSource[]>([]);
+  const [officialSourceId, setOfficialSourceId] = useState("fixture-moe-math-g7");
+  const [customFeedUrl, setCustomFeedUrl] = useState("");
+  const [acceptLicense, setAcceptLicense] = useState(false);
+  const [syncResult, setSyncResult] = useState<EduOfficialSyncResult | null>(null);
 
   const pointName = useMemo(() => {
     const map = new Map(points.map((p) => [p.id, p.name]));
@@ -69,18 +76,21 @@ export default function EduPage() {
 
   const refresh = useCallback(async () => {
     if (!token) return;
-    const [p, pt, qs] = await Promise.all([
+    const [p, pt, qs, sources] = await Promise.all([
       api.eduPacks(token),
       api.eduPoints(token),
       api.eduQuestions(token, {
         knowledge_point_id: pointFilter || undefined,
         limit: 50,
       }),
+      api.eduOfficialSources(token),
     ]);
     setPacks(p);
     setPoints(pt);
     setQuestions(qs);
-  }, [token, pointFilter]);
+    setOfficialSources(sources);
+    if (!officialSourceId && sources[0]) setOfficialSourceId(sources[0].id);
+  }, [token, pointFilter, officialSourceId]);
 
   useEffect(() => {
     refresh().catch((err) =>
@@ -97,6 +107,27 @@ export default function EduPage() {
       await refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "导入演示包失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onOfficialSync() {
+    if (!token || !workspaceId) return;
+    setBusy(true);
+    setError("");
+    setSyncResult(null);
+    try {
+      const res = await api.eduOfficialSync(token, {
+        source_id: officialSourceId,
+        workspace_id: workspaceId,
+        accept_license: acceptLicense,
+        feed_url: officialSourceId === "live-custom" ? customFeedUrl.trim() || undefined : undefined,
+      });
+      setSyncResult(res);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "官网同步失败");
     } finally {
       setBusy(false);
     }
@@ -185,6 +216,66 @@ export default function EduPage() {
       </header>
 
       {error ? <div className="error">{error}</div> : null}
+
+      <section className="panel">
+        <div>
+          <h2>官网自动同步</h2>
+          <p className="muted">
+            仅拉取白名单教育官网 / 授权 JSON 源。须勾选授权确认；默认 fixture
+            模式可离线演示，线上设 EDU_OFFICIAL_MODE=live。
+          </p>
+        </div>
+        <div className="stack" style={{ gap: 12, marginTop: 12 }}>
+          <label className="field">
+            官方源
+            <select
+              className="select"
+              value={officialSourceId}
+              onChange={(e) => setOfficialSourceId(e.target.value)}
+            >
+              {officialSources.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}（{LICENSE_LABEL[s.license_type] || s.license_type}）
+                </option>
+              ))}
+            </select>
+          </label>
+          {officialSourceId === "live-custom" ? (
+            <label className="field">
+              授权 Feed URL（白名单域名）
+              <input
+                value={customFeedUrl}
+                onChange={(e) => setCustomFeedUrl(e.target.value)}
+                placeholder="https://www.moe.gov.cn/.../feed.json"
+              />
+            </label>
+          ) : null}
+          <label className="row" style={{ gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={acceptLicense}
+              onChange={(e) => setAcceptLicense(e.target.checked)}
+            />
+            <span>我确认该来源为官方公开或已获授权内容，同意按声明许可入库</span>
+          </label>
+          <div className="row">
+            <button className="btn" type="button" disabled={busy} onClick={onOfficialSync}>
+              {busy ? "同步中…" : "从官网同步教程与试题"}
+            </button>
+          </div>
+          {syncResult ? (
+            <p className="muted">
+              同步{syncResult.status}：教程 {syncResult.tutorials_imported} · 知识点{" "}
+              {syncResult.points_imported} · 试题 {syncResult.questions_imported}
+            </p>
+          ) : null}
+          {officialSources.find((s) => s.id === officialSourceId)?.license_note ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              许可说明：{officialSources.find((s) => s.id === officialSourceId)?.license_note}
+            </p>
+          ) : null}
+        </div>
+      </section>
 
       <section className="panel">
         <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>

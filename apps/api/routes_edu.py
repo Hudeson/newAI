@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from shared.db import get_db
+from shared.db.models import EduOfficialSyncJob
+from shared.edu_official import catalog_sources, get_source, sync_official_source
 from shared.education import (
     create_pack,
     create_question,
@@ -21,6 +23,8 @@ from shared.education import (
     upsert_document_meta,
     upsert_point,
 )
+from shared.errors import AppError, ErrorCode
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from api.auth import AuthContext, get_current_auth
@@ -543,3 +547,154 @@ def api_practice_answer(
         user_answer_md=item.user_answer_md or "",
         is_correct=item.is_correct,
     )
+
+
+class OfficialSourceOut(BaseModel):
+    id: str
+    name: str
+    provider: str
+    stage: str
+    subject: str
+    grade: int | None
+    license_type: str
+    license_note: str
+    feed_url: str
+    format: str
+    description: str
+
+
+class OfficialSyncIn(BaseModel):
+    source_id: str = Field(min_length=1)
+    workspace_id: str = Field(min_length=1)
+    accept_license: bool = False
+    feed_url: str | None = None
+    pack_id: str | None = None
+
+
+class OfficialSyncOut(BaseModel):
+    job_id: str
+    source_id: str
+    pack_id: str
+    status: str
+    tutorials_imported: int
+    questions_imported: int
+    points_imported: int
+    document_ids: list[str]
+    question_ids: list[str]
+    error: str = ""
+
+
+class OfficialSyncJobOut(BaseModel):
+    id: str
+    source_id: str
+    feed_url: str
+    pack_id: str | None
+    status: str
+    tutorials_imported: int
+    questions_imported: int
+    points_imported: int
+    error: str
+
+
+@router.get("/official/sources", response_model=list[OfficialSourceOut])
+def api_official_sources(
+    auth: AuthContext = Depends(get_current_auth),
+) -> list[OfficialSourceOut]:
+    _ = auth
+    return [
+        OfficialSourceOut(
+            id=s.id,
+            name=s.name,
+            provider=s.provider,
+            stage=s.stage,
+            subject=s.subject,
+            grade=s.grade,
+            license_type=s.license_type,
+            license_note=s.license_note,
+            feed_url=s.feed_url,
+            format=s.format,
+            description=s.description,
+        )
+        for s in catalog_sources()
+    ]
+
+
+@router.post("/official/sync", response_model=OfficialSyncOut)
+def api_official_sync(
+    body: OfficialSyncIn,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> OfficialSyncOut:
+    # Validate source exists early for clearer 404
+    get_source(body.source_id)
+    result = sync_official_source(
+        db,
+        tenant_id=auth.tenant_id,
+        user_id=auth.user_id,
+        workspace_id=body.workspace_id,
+        source_id=body.source_id,
+        accept_license=body.accept_license,
+        feed_url=body.feed_url,
+        pack_id=body.pack_id,
+    )
+    return OfficialSyncOut(
+        job_id=result.job_id,
+        source_id=result.source_id,
+        pack_id=result.pack_id,
+        status=result.status,
+        tutorials_imported=result.tutorials_imported,
+        questions_imported=result.questions_imported,
+        points_imported=result.points_imported,
+        document_ids=result.document_ids,
+        question_ids=result.question_ids,
+        error=result.error,
+    )
+
+
+@router.get("/official/sync/{job_id}", response_model=OfficialSyncJobOut)
+def api_official_sync_job(
+    job_id: str,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> OfficialSyncJobOut:
+    job = db.get(EduOfficialSyncJob, job_id)
+    if job is None or job.tenant_id != auth.tenant_id:
+        raise AppError(ErrorCode.NOT_FOUND, "sync job not found", status_code=404)
+    return OfficialSyncJobOut(
+        id=job.id,
+        source_id=job.source_id,
+        feed_url=job.feed_url or "",
+        pack_id=job.pack_id,
+        status=job.status,
+        tutorials_imported=job.tutorials_imported,
+        questions_imported=job.questions_imported,
+        points_imported=job.points_imported,
+        error=job.error or "",
+    )
+
+
+@router.get("/official/jobs", response_model=list[OfficialSyncJobOut])
+def api_official_jobs(
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> list[OfficialSyncJobOut]:
+    rows = db.scalars(
+        select(EduOfficialSyncJob)
+        .where(EduOfficialSyncJob.tenant_id == auth.tenant_id)
+        .order_by(EduOfficialSyncJob.created_at.desc())
+        .limit(50)
+    ).all()
+    return [
+        OfficialSyncJobOut(
+            id=j.id,
+            source_id=j.source_id,
+            feed_url=j.feed_url or "",
+            pack_id=j.pack_id,
+            status=j.status,
+            tutorials_imported=j.tutorials_imported,
+            questions_imported=j.questions_imported,
+            points_imported=j.points_imported,
+            error=j.error or "",
+        )
+        for j in rows
+    ]

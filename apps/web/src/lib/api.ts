@@ -288,6 +288,33 @@ export type EduPracticeAnswer = {
   is_correct: number | null;
 };
 
+export type EduOfficialSource = {
+  id: string;
+  name: string;
+  provider: string;
+  stage: string;
+  subject: string;
+  grade: number | null;
+  license_type: string;
+  license_note: string;
+  feed_url: string;
+  format: string;
+  description: string;
+};
+
+export type EduOfficialSyncResult = {
+  job_id: string;
+  source_id: string;
+  pack_id: string;
+  status: string;
+  tutorials_imported: number;
+  questions_imported: number;
+  points_imported: number;
+  document_ids: string[];
+  question_ids: string[];
+  error: string;
+};
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -588,6 +615,27 @@ export const api = {
     body: { question_id: string; user_answer_md: string },
   ) {
     return apiFetch<EduPracticeAnswer>(`/v1/edu/practice/${sessionId}/answer`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduOfficialSources(token: string) {
+    return apiFetch<EduOfficialSource[]>("/v1/edu/official/sources", { token });
+  },
+
+  eduOfficialSync(
+    token: string,
+    body: {
+      source_id: string;
+      workspace_id: string;
+      accept_license: boolean;
+      feed_url?: string;
+      pack_id?: string;
+    },
+  ) {
+    return apiFetch<EduOfficialSyncResult>("/v1/edu/official/sync", {
       method: "POST",
       token,
       body: JSON.stringify(body),

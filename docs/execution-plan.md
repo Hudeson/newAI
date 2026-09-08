@@ -348,6 +348,7 @@ docs/               # 已有设计
 | EDU.1 表 + CRUD | **完成** | migration `0008` + `shared/education.py` + `/v1/edu/*` |
 | EDU.2 讲题 / 相似 | **完成** | `explain` + anchors ACL + 知识点相似 |
 | EDU.3 学习 UI | **完成** | `/app/edu` + 演示包 seed |
+| EDU.3.5 官网同步 | **完成** | `/v1/edu/official/*` + 白名单拉取 |
 | EDU.4–6 | 待开工 | 向量相似、Wiki 对齐、多学科订阅 |
 
-**设计锁定**：题目一等公民；内容包强制 `license_type`；禁止默认「全国盗版教辅」；讲题引用二次 ACL；`EDU_ENABLED` 可关。
+**设计锁定**：题目一等公民；内容包强制 `license_type`；禁止默认「全国盗版教辅」；讲题引用二次 ACL；`EDU_ENABLED` 可关。官网同步仅允许白名单域名且必须 `accept_license`；默认 `EDU_OFFICIAL_MODE=fixture`。

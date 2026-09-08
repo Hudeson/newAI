@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     edu_require_license: bool = True
     edu_default_stage: str = "junior"
     edu_similar_top_k: int = 5
+    edu_official_fetch_enabled: bool = True
+    edu_official_mode: str = "fixture"  # fixture | live
+    edu_official_allow_hosts: str = ""
+    edu_official_timeout_seconds: float = 30.0
 
     @property
     def sqlalchemy_url(self) -> str:

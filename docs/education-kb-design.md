@@ -269,6 +269,9 @@ Ask 扩展：`POST /v1/ask` 增加 `edu_question_id`；或独立 `POST /v1/edu/e
 | POST | `/v1/edu/practice` | 开练习会话 |
 | POST | `/v1/edu/practice/{id}/answer` | 提交作答 |
 | GET | `/v1/edu/similar` | `question_id` 相似题 |
+| GET | `/v1/edu/official/sources` | 官方/公开源目录（白名单） |
+| POST | `/v1/edu/official/sync` | 自动拉取教程+试题入库（需 `accept_license`） |
+| GET | `/v1/edu/official/sync/{job_id}` | 同步任务状态 |
 
 ---
 
@@ -315,6 +318,7 @@ Ask 扩展：`POST /v1/ask` 增加 `edu_question_id`；或独立 `POST /v1/edu/e
 | **EDU.1** | packs/meta/points/questions 表 + CRUD API | 现网 | **完成**（`0008`） |
 | **EDU.2** | Explain 讲题 + 教材锚点引用 | EDU.1, Gateway | **完成** |
 | **EDU.3** | `/app/edu` 题库+讲题 UI | EDU.2 | **完成** |
+| **EDU.3.5** | 官网/授权源自动同步教程与试题 | EDU.3 | **完成**（白名单 + fixture/live） |
 | **EDU.4** | 相似题 + 练习会话 | OPT.1 更佳 | 结构相似已有；向量待 OPT |
 | **EDU.5** | Wiki/KG 知识点对齐 + Lint | WIKI.* | 待开工 |
 | **EDU.6** | 多学科扩展与平台内容订阅 | EDU.5 | 待开工 |
@@ -331,6 +335,10 @@ Ask 扩展：`POST /v1/ask` 增加 `edu_question_id`；或独立 `POST /v1/edu/e
 | `EDU_REQUIRE_LICENSE` | `true` | 强制内容包授权字段 |
 | `EDU_DEFAULT_STAGE` | `junior` | |
 | `EDU_SIMILAR_TOP_K` | `5` | |
+| `EDU_OFFICIAL_FETCH_ENABLED` | `true` | 官网自动同步总开关 |
+| `EDU_OFFICIAL_MODE` | `fixture` | `fixture` 离线样例；`live` 才请求白名单 HTTP |
+| `EDU_OFFICIAL_ALLOW_HOSTS` | `` | 额外允许的官方域名（逗号分隔） |
+| `EDU_OFFICIAL_TIMEOUT_SECONDS` | `30` | |
 
 ---
 
