@@ -4,7 +4,7 @@
 > 对照实现参考：Microsoft llmwiki 三层架构、Obsidian LLM Wiki 实践  
 > 落地对象：本仓库 **Atrium KB**（企业级个人/团队知识库 Agent）  
 > 状态：设计定稿（可评审、可分阶段实施）  
-> 关联：[`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)、[`knowledge-graph.md`](./knowledge-graph.md)、[`personal-knowledge-base-agent.md`](./personal-knowledge-base-agent.md)
+> 关联：[`llm-wiki-comparison.md`](./llm-wiki-comparison.md)（与原方案对照）、[`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)、[`knowledge-graph.md`](./knowledge-graph.md)、[`personal-knowledge-base-agent.md`](./personal-knowledge-base-agent.md)
 
 ---
 

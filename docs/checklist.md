@@ -99,6 +99,7 @@
 ## WIKI LLM Wiki 编译层（Karpathy）
 
 > 理念设计：[`llm-wiki-design.md`](./llm-wiki-design.md)  
+> 与原方案对照：[`llm-wiki-comparison.md`](./llm-wiki-comparison.md)  
 > 默认 Schema：[`wiki-schema-default.md`](./wiki-schema-default.md)
 
 - [x] WIKI.0 完善设计文档
