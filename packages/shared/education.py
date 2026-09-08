@@ -542,24 +542,45 @@ def explain_question(
             ):
                 context_blocks.append(f"[教材文档] document_id={anchor.document_id} {anchor.note}")
 
-    hits = search_chunks(
-        db,
-        tenant_id=tenant_id,
-        user_id=user_id,
-        query=stem[:500],
-        limit=max(1, min(limit, 10)),
-    )
-    for h in hits:
-        context_blocks.append(h.content)
-        citations.append(
-            {
-                "chunk_id": h.chunk_id,
-                "document_id": h.document_id,
-                "snippet": h.content[:240],
-                "source": "search",
-                "score": h.score,
-            }
+    # Opportunistic corpus search only when we lack structured analysis/anchors,
+    # and prefer chunks from documents tagged with matching edu meta.
+    need_search = not analysis and not any(c.get("source") == "anchor" for c in citations)
+    if need_search or (q and q.subject):
+        edu_docs: set[str] = set()
+        if q:
+            edu_docs = set(
+                db.scalars(
+                    select(EduDocumentMeta.document_id).where(
+                        EduDocumentMeta.tenant_id == tenant_id,
+                        EduDocumentMeta.subject == q.subject,
+                    )
+                ).all()
+            )
+        hits = search_chunks(
+            db,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            query=stem[:500],
+            limit=max(1, min(limit, 10)),
         )
+        for h in hits:
+            if edu_docs and h.document_id not in edu_docs:
+                continue
+            if not edu_docs and not need_search:
+                # Avoid polluting explain with unrelated KB chunks when analysis exists.
+                continue
+            if getattr(h, "score", 0) is not None and h.score < 0.35 and not need_search:
+                continue
+            context_blocks.append(h.content)
+            citations.append(
+                {
+                    "chunk_id": h.chunk_id,
+                    "document_id": h.document_id,
+                    "snippet": h.content[:240],
+                    "source": "search",
+                    "score": h.score,
+                }
+            )
 
     prompt = (
         "请讲解下面这道题：给出清晰步骤、易错点，并在有证据时引用教材/解析。"
