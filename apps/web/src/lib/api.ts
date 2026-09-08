@@ -221,6 +221,73 @@ export type LlmEnvStatus = {
   ollama_model: string;
 };
 
+export type EduPack = {
+  id: string;
+  name: string;
+  stage: string;
+  subject: string;
+  grade_min: number | null;
+  grade_max: number | null;
+  edition: string;
+  license_type: string;
+  license_note: string;
+  status: string;
+};
+
+export type EduPoint = {
+  id: string;
+  name: string;
+  code: string;
+  subject: string;
+  stage: string;
+  grade: number | null;
+  pack_id: string | null;
+  parent_id: string | null;
+};
+
+export type EduQuestion = {
+  id: string;
+  stem_md: string;
+  options: string[];
+  answer_md: string;
+  analysis_md: string;
+  qtype: string;
+  difficulty: number;
+  grade: number | null;
+  subject: string;
+  stage: string;
+  pack_id: string | null;
+  knowledge_point_ids: string[];
+  anchors?: { id: string; document_id: string; chunk_id: string | null; note: string }[];
+};
+
+export type EduExplain = {
+  answer: string;
+  question_id: string;
+  citations: {
+    chunk_id?: string | null;
+    document_id?: string | null;
+    snippet: string;
+    source: string;
+    score?: number | null;
+  }[];
+  knowledge_point_ids: string[];
+};
+
+export type EduPractice = {
+  session_id: string;
+  mode: string;
+  questions: EduQuestion[];
+};
+
+export type EduPracticeAnswer = {
+  id: string;
+  session_id: string;
+  question_id: string;
+  user_answer_md: string;
+  is_correct: number | null;
+};
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -435,6 +502,96 @@ export const api = {
 
   graphJob(token: string, jobId: string) {
     return apiFetch<GraphJob>(`/v1/graph/jobs/${jobId}`, { token });
+  },
+
+  eduPacks(token: string) {
+    return apiFetch<EduPack[]>("/v1/edu/packs", { token });
+  },
+
+  eduSeedDemo(token: string) {
+    return apiFetch<{ pack_id: string; created: boolean; points: number; questions: number }>(
+      "/v1/edu/packs/seed-demo",
+      { method: "POST", token },
+    );
+  },
+
+  eduPoints(token: string, opts?: { subject?: string; pack_id?: string }) {
+    const params = new URLSearchParams();
+    if (opts?.subject) params.set("subject", opts.subject);
+    if (opts?.pack_id) params.set("pack_id", opts.pack_id);
+    const q = params.toString() ? `?${params}` : "";
+    return apiFetch<EduPoint[]>(`/v1/edu/points${q}`, { token });
+  },
+
+  eduQuestions(
+    token: string,
+    opts?: {
+      subject?: string;
+      stage?: string;
+      grade?: number;
+      pack_id?: string;
+      knowledge_point_id?: string;
+      difficulty?: number;
+      limit?: number;
+    },
+  ) {
+    const params = new URLSearchParams();
+    if (opts?.subject) params.set("subject", opts.subject);
+    if (opts?.stage) params.set("stage", opts.stage);
+    if (opts?.grade != null) params.set("grade", String(opts.grade));
+    if (opts?.pack_id) params.set("pack_id", opts.pack_id);
+    if (opts?.knowledge_point_id) params.set("knowledge_point_id", opts.knowledge_point_id);
+    if (opts?.difficulty != null) params.set("difficulty", String(opts.difficulty));
+    if (opts?.limit != null) params.set("limit", String(opts.limit));
+    const q = params.toString() ? `?${params}` : "";
+    return apiFetch<EduQuestion[]>(`/v1/edu/questions${q}`, { token });
+  },
+
+  eduQuestion(token: string, id: string) {
+    return apiFetch<EduQuestion>(`/v1/edu/questions/${id}`, { token });
+  },
+
+  eduExplain(token: string, body: { question_id?: string; stem_md?: string; limit?: number }) {
+    return apiFetch<EduExplain>("/v1/edu/explain", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduSimilar(token: string, questionId: string, topK?: number) {
+    const params = new URLSearchParams({ question_id: questionId });
+    if (topK != null) params.set("top_k", String(topK));
+    return apiFetch<EduQuestion[]>(`/v1/edu/similar?${params}`, { token });
+  },
+
+  eduPractice(
+    token: string,
+    body: {
+      mode?: string;
+      workspace_id?: string;
+      filters?: Record<string, unknown>;
+      question_ids?: string[];
+      limit?: number;
+    },
+  ) {
+    return apiFetch<EduPractice>("/v1/edu/practice", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduPracticeAnswer(
+    token: string,
+    sessionId: string,
+    body: { question_id: string; user_answer_md: string },
+  ) {
+    return apiFetch<EduPracticeAnswer>(`/v1/edu/practice/${sessionId}/answer`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
   },
 
   usageSummary(token: string) {

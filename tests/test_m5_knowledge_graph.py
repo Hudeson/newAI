@@ -87,7 +87,7 @@ def test_rule_extract_finds_entities_and_relations():
 
 def test_extract_and_list_entities(tmp_path: Path, monkeypatch):
     client = _client(tmp_path, monkeypatch)
-    assert client.get("/v1/meta").json()["milestone"] == "Knowledge-Graph"
+    assert client.get("/v1/meta").json()["milestone"] in {"Knowledge-Graph", "Education-KB"}
     reg = _register(client, "kgco", "admin@kgco.example")
     headers = {"Authorization": f"Bearer {reg['access_token']}"}
     ws = client.get("/v1/workspaces", headers=headers).json()[0]

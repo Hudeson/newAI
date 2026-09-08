@@ -109,3 +109,15 @@
 - [ ] WIKI.4 Ask wiki 检索 + 归档
 - [ ] WIKI.5 Lint + `/app/wiki`
 - [ ] WIKI.6 监督审批 + KG 投影
+
+## EDU 教育智能知识库（K12）
+
+> 设计：[`education-kb-design.md`](./education-kb-design.md)
+
+- [x] EDU.0 设计定稿
+- [x] EDU.1 packs / meta / points / questions CRUD + migration `0008`
+- [x] EDU.2 Explain 讲题 + 教材锚点 ACL + 相似题（结构）
+- [x] EDU.3 `/app/edu` 学习页（题库 / 讲题 / 练习）
+- [ ] EDU.4 练习会话增强 + 向量相似题（依赖 OPT.1）
+- [ ] EDU.5 Wiki/KG 知识点对齐 + Lint
+- [ ] EDU.6 多学科扩展与平台内容订阅

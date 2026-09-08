@@ -11,6 +11,7 @@ from shared.db.models import UsageLedger
 from shared.gateway import (
     CompletionResult,
     build_ask_messages,
+    build_edu_explain_messages,
     build_graph_extract_messages,
     build_learn_messages,
     local_extractive_answer,
@@ -117,6 +118,8 @@ def gateway_complete(
             title=prompt,
             text="\n\n".join(context_blocks),
         )
+    elif purpose == "edu_explain":
+        messages = build_edu_explain_messages(prompt=prompt, context_blocks=context_blocks)
     else:
         messages = build_ask_messages(prompt=prompt, context_blocks=context_blocks)
 

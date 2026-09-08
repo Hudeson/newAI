@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     graph_ask_augment_default: bool = False
     graph_local_fallback: bool = True
 
+    # Education KB (K12 pilot)
+    edu_enabled: bool = True
+    edu_require_license: bool = True
+    edu_default_stage: str = "junior"
+    edu_similar_top_k: int = 5
+
     @property
     def sqlalchemy_url(self) -> str:
         return self.database_url
