@@ -28,6 +28,8 @@ class AskResult:
     answer: str
     citations: list[Citation]
     graph_augmented: bool = False
+    web_search_augmented: bool = False
+    web_citations: list[dict] | None = None
 
 
 def validate_citations(
@@ -64,8 +66,11 @@ def ask(
     question: str,
     limit: int = 5,
     graph_augment: bool = False,
+    web_search: bool = False,
 ) -> AskResult:
+    from shared.config import get_settings
     from shared.graph import serialize_graph_context
+    from shared.web_search import serialize_web_context, web_hits_to_dict, web_search as run_web_search
 
     hits: list[SearchHit] = search_chunks(
         db,
@@ -94,6 +99,18 @@ def ask(
             context_blocks = [
                 "[知识图谱]\n" + b for b in graph_blocks
             ] + context_blocks
+
+    web_hits = []
+    web_blocks: list[str] = []
+    if web_search and get_settings().web_search_enabled:
+        try:
+            web_hits = run_web_search(question, limit=min(limit, 5), education=False)
+            web_blocks = serialize_web_context(web_hits)
+            if web_blocks:
+                context_blocks = web_blocks + context_blocks
+        except Exception:  # noqa: BLE001 - web search is best-effort for Ask
+            web_hits = []
+            web_blocks = []
 
     # Route by highest sensitivity among cited documents (L4 > L1).
     sensitivity = "L2"
@@ -140,7 +157,8 @@ def ask(
                 f'{{"question_len":{len(question)},'
                 f'"citation_count":{len(citations)},'
                 f'"answer_tokens":{len(tokenize(answer))},'
-                f'"graph_augmented":{str(bool(graph_augment and graph_blocks)).lower()}}}'
+                f'"graph_augmented":{str(bool(graph_augment and graph_blocks)).lower()},'
+                f'"web_search_augmented":{str(bool(web_blocks)).lower()}}}'
             ),
         )
     )
@@ -149,4 +167,6 @@ def ask(
         answer=answer,
         citations=citations,
         graph_augmented=bool(graph_augment and graph_blocks),
+        web_search_augmented=bool(web_blocks),
+        web_citations=web_hits_to_dict(web_hits) if web_hits else [],
     )

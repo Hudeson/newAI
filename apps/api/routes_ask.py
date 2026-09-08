@@ -19,6 +19,7 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=5, ge=1, le=20)
     graph_augment: bool | None = None
+    web_search: bool | None = None
 
 
 class CitationOut(BaseModel):
@@ -31,10 +32,22 @@ class CitationOut(BaseModel):
     snippet: str
 
 
+class WebCitationOut(BaseModel):
+    title: str
+    url: str
+    snippet: str
+    provider: str
+    score: float = 0.0
+    host: str = ""
+    allowlisted: bool = False
+
+
 class AskResponse(BaseModel):
     answer: str
     citations: list[CitationOut]
     graph_augmented: bool = False
+    web_search_augmented: bool = False
+    web_citations: list[WebCitationOut] = Field(default_factory=list)
 
 
 class UsageOut(BaseModel):
@@ -59,6 +72,9 @@ def ask(
         if body.graph_augment is None
         else body.graph_augment
     )
+    use_web = (
+        settings.ask_web_search_default if body.web_search is None else body.web_search
+    )
     result = run_ask(
         db,
         tenant_id=auth.tenant_id,
@@ -66,6 +82,7 @@ def ask(
         question=body.question,
         limit=body.limit,
         graph_augment=graph_augment,
+        web_search=use_web,
     )
     return AskResponse(
         answer=result.answer,
@@ -82,6 +99,8 @@ def ask(
             for c in result.citations
         ],
         graph_augmented=result.graph_augmented,
+        web_search_augmented=result.web_search_augmented,
+        web_citations=[WebCitationOut(**w) for w in (result.web_citations or [])],
     )
 
 

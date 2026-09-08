@@ -165,6 +165,19 @@ def build_graph_extract_messages(*, title: str, text: str) -> list[dict[str, str
     user = f"标题：{title or '（无标题）'}\n\n分块：\n{(text or '')[:8000]}"
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
+
+def build_edu_explain_messages(*, prompt: str, context_blocks: list[str]) -> list[dict[str, str]]:
+    evidence = "\n\n".join(
+        f"[{i + 1}] {b.strip()}" for i, b in enumerate(context_blocks[:10]) if b.strip()
+    )
+    system = (
+        "你是中小学学科辅导老师。依据题目解析、知识点与授权教材证据讲解。"
+        "给出步骤化思路与易错点；证据不足时明确说明。"
+        "相关时用 [1] 等形式标注证据编号。不要编造未提供的教材原文。"
+    )
+    user = f"证据：\n{evidence or '（无）'}\n\n{prompt.strip()}"
+    return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
 def ping_provider(
     *,
     provider: str,

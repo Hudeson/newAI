@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -413,4 +413,139 @@ class GraphExtractJob(Base):
     trigger: Mapped[str] = mapped_column(String(32), default="manual")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EduContentPack(Base):
+    __tablename__ = "edu_content_packs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject: Mapped[str] = mapped_column(String(64), nullable=False)
+    grade_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    grade_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    edition: Mapped[str] = mapped_column(String(200), default="")
+    license_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    license_note: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EduDocumentMeta(Base):
+    __tablename__ = "edu_document_meta"
+
+    document_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    pack_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject: Mapped[str] = mapped_column(String(64), nullable=False)
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
+    edition: Mapped[str] = mapped_column(String(200), default="")
+    volume: Mapped[str] = mapped_column(String(64), default="")
+    unit_no: Mapped[str] = mapped_column(String(64), default="")
+    lesson_title: Mapped[str] = mapped_column(String(300), default="")
+    curriculum_code: Mapped[str] = mapped_column(String(128), default="")
+
+
+class EduKnowledgePoint(Base):
+    __tablename__ = "edu_knowledge_points"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "subject", "code", "name", name="uq_edu_kp_tenant_code_name"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    pack_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    code: Mapped[str] = mapped_column(String(128), default="")
+    name: Mapped[str] = mapped_column(String(300), nullable=False)
+    subject: Mapped[str] = mapped_column(String(64), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    parent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    wiki_page_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    entity_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+
+class EduQuestion(Base):
+    __tablename__ = "edu_questions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    pack_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    stem_md: Mapped[str] = mapped_column(Text, nullable=False)
+    options_json: Mapped[str] = mapped_column(Text, default="[]")
+    answer_md: Mapped[str] = mapped_column(Text, default="")
+    analysis_md: Mapped[str] = mapped_column(Text, default="")
+    qtype: Mapped[str] = mapped_column(String(32), nullable=False)
+    difficulty: Mapped[int] = mapped_column(Integer, default=3)
+    grade: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    subject: Mapped[str] = mapped_column(String(64), nullable=False)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_doc_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EduQuestionPoint(Base):
+    __tablename__ = "edu_question_points"
+
+    question_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    knowledge_point_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    weight: Mapped[float] = mapped_column(Float, default=1.0)
+
+
+class EduQuestionAnchor(Base):
+    __tablename__ = "edu_question_anchors"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    question_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    chunk_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+
+
+class EduPracticeSession(Base):
+    __tablename__ = "edu_practice_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    mode: Mapped[str] = mapped_column(String(32), nullable=False)
+    filter_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EduPracticeItem(Base):
+    __tablename__ = "edu_practice_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    question_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_answer_md: Mapped[str] = mapped_column(Text, default="")
+    is_correct: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    explain_ask_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class EduOfficialSyncJob(Base):
+    __tablename__ = "edu_official_sync_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    workspace_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    feed_url: Mapped[str] = mapped_column(Text, default="")
+    pack_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="queued")
+    tutorials_imported: Mapped[int] = mapped_column(Integer, default=0)
+    questions_imported: Mapped[int] = mapped_column(Integer, default=0)
+    points_imported: Mapped[int] = mapped_column(Integer, default=0)
+    detail_json: Mapped[str] = mapped_column(Text, default="{}")
+    error: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

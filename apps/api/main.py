@@ -12,6 +12,7 @@ from api.routes_ask import router as ask_router
 from api.routes_auth import router as auth_router
 from api.routes_connectors import router as connectors_router
 from api.routes_documents import router as documents_router
+from api.routes_edu import router as edu_router
 from api.routes_governance import router as governance_router
 from api.routes_graph import router as graph_router
 from api.routes_learning import router as learning_router
@@ -44,6 +45,7 @@ app.include_router(search_router)
 app.include_router(learning_router)
 app.include_router(ask_router)
 app.include_router(graph_router)
+app.include_router(edu_router)
 app.include_router(governance_router)
 app.include_router(agent_router)
 app.include_router(connectors_router)
@@ -104,6 +106,6 @@ def meta(request: Request) -> dict:
         "service": "kb-agent-api",
         "version": "0.1.0",
         "profile": current.profile,
-        "milestone": "Knowledge-Graph",
+        "milestone": "Education-KB",
         "request_id": getattr(request.state, "request_id", ""),
     }

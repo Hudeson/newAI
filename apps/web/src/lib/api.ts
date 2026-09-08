@@ -72,6 +72,16 @@ export type AskResponse = {
   answer: string;
   citations: Citation[];
   graph_augmented?: boolean;
+  web_search_augmented?: boolean;
+  web_citations?: {
+    title: string;
+    url: string;
+    snippet: string;
+    provider: string;
+    score?: number;
+    host?: string;
+    allowlisted?: boolean;
+  }[];
 };
 
 export type GraphStats = {
@@ -219,6 +229,124 @@ export type LlmEnvStatus = {
   llm_key_configured: boolean;
   ollama_base_url: string;
   ollama_model: string;
+};
+
+export type EduPack = {
+  id: string;
+  name: string;
+  stage: string;
+  subject: string;
+  grade_min: number | null;
+  grade_max: number | null;
+  edition: string;
+  license_type: string;
+  license_note: string;
+  status: string;
+};
+
+export type EduPoint = {
+  id: string;
+  name: string;
+  code: string;
+  subject: string;
+  stage: string;
+  grade: number | null;
+  pack_id: string | null;
+  parent_id: string | null;
+};
+
+export type EduQuestion = {
+  id: string;
+  stem_md: string;
+  options: string[];
+  answer_md: string;
+  analysis_md: string;
+  qtype: string;
+  difficulty: number;
+  grade: number | null;
+  subject: string;
+  stage: string;
+  pack_id: string | null;
+  knowledge_point_ids: string[];
+  anchors?: { id: string; document_id: string; chunk_id: string | null; note: string }[];
+};
+
+export type EduExplain = {
+  answer: string;
+  question_id: string;
+  citations: {
+    chunk_id?: string | null;
+    document_id?: string | null;
+    snippet: string;
+    source: string;
+    score?: number | null;
+  }[];
+  knowledge_point_ids: string[];
+};
+
+export type EduPractice = {
+  session_id: string;
+  mode: string;
+  questions: EduQuestion[];
+};
+
+export type EduPracticeAnswer = {
+  id: string;
+  session_id: string;
+  question_id: string;
+  user_answer_md: string;
+  is_correct: number | null;
+};
+
+export type EduOfficialSource = {
+  id: string;
+  name: string;
+  provider: string;
+  stage: string;
+  subject: string;
+  grade: number | null;
+  license_type: string;
+  license_note: string;
+  feed_url: string;
+  format: string;
+  description: string;
+};
+
+export type EduOfficialSyncResult = {
+  job_id: string;
+  source_id: string;
+  pack_id: string;
+  status: string;
+  tutorials_imported: number;
+  questions_imported: number;
+  points_imported: number;
+  document_ids: string[];
+  question_ids: string[];
+  error: string;
+};
+
+export type EduWebSearchResult = {
+  query: string;
+  provider: string;
+  hits: {
+    title: string;
+    url: string;
+    snippet: string;
+    provider: string;
+    score: number;
+    host: string;
+    allowlisted: boolean;
+  }[];
+  auto_import: boolean;
+  imports: {
+    job_id: string;
+    source_id: string;
+    pack_id: string;
+    status: string;
+    tutorials_imported: number;
+    questions_imported: number;
+    points_imported: number;
+  }[];
 };
 
 export class ApiError extends Error {
@@ -400,11 +528,16 @@ export const api = {
     );
   },
 
-  ask(token: string, question: string, limit = 5, graphAugment = false) {
+  ask(token: string, question: string, limit = 5, graphAugment = false, webSearch = false) {
     return apiFetch<AskResponse>("/v1/ask", {
       method: "POST",
       token,
-      body: JSON.stringify({ question, limit, graph_augment: graphAugment }),
+      body: JSON.stringify({
+        question,
+        limit,
+        graph_augment: graphAugment,
+        web_search: webSearch,
+      }),
     });
   },
 
@@ -435,6 +568,137 @@ export const api = {
 
   graphJob(token: string, jobId: string) {
     return apiFetch<GraphJob>(`/v1/graph/jobs/${jobId}`, { token });
+  },
+
+  eduPacks(token: string) {
+    return apiFetch<EduPack[]>("/v1/edu/packs", { token });
+  },
+
+  eduSeedDemo(token: string) {
+    return apiFetch<{ pack_id: string; created: boolean; points: number; questions: number }>(
+      "/v1/edu/packs/seed-demo",
+      { method: "POST", token },
+    );
+  },
+
+  eduPoints(token: string, opts?: { subject?: string; pack_id?: string }) {
+    const params = new URLSearchParams();
+    if (opts?.subject) params.set("subject", opts.subject);
+    if (opts?.pack_id) params.set("pack_id", opts.pack_id);
+    const q = params.toString() ? `?${params}` : "";
+    return apiFetch<EduPoint[]>(`/v1/edu/points${q}`, { token });
+  },
+
+  eduQuestions(
+    token: string,
+    opts?: {
+      subject?: string;
+      stage?: string;
+      grade?: number;
+      pack_id?: string;
+      knowledge_point_id?: string;
+      difficulty?: number;
+      limit?: number;
+    },
+  ) {
+    const params = new URLSearchParams();
+    if (opts?.subject) params.set("subject", opts.subject);
+    if (opts?.stage) params.set("stage", opts.stage);
+    if (opts?.grade != null) params.set("grade", String(opts.grade));
+    if (opts?.pack_id) params.set("pack_id", opts.pack_id);
+    if (opts?.knowledge_point_id) params.set("knowledge_point_id", opts.knowledge_point_id);
+    if (opts?.difficulty != null) params.set("difficulty", String(opts.difficulty));
+    if (opts?.limit != null) params.set("limit", String(opts.limit));
+    const q = params.toString() ? `?${params}` : "";
+    return apiFetch<EduQuestion[]>(`/v1/edu/questions${q}`, { token });
+  },
+
+  eduQuestion(token: string, id: string) {
+    return apiFetch<EduQuestion>(`/v1/edu/questions/${id}`, { token });
+  },
+
+  eduExplain(token: string, body: { question_id?: string; stem_md?: string; limit?: number }) {
+    return apiFetch<EduExplain>("/v1/edu/explain", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduSimilar(token: string, questionId: string, topK?: number) {
+    const params = new URLSearchParams({ question_id: questionId });
+    if (topK != null) params.set("top_k", String(topK));
+    return apiFetch<EduQuestion[]>(`/v1/edu/similar?${params}`, { token });
+  },
+
+  eduPractice(
+    token: string,
+    body: {
+      mode?: string;
+      workspace_id?: string;
+      filters?: Record<string, unknown>;
+      question_ids?: string[];
+      limit?: number;
+    },
+  ) {
+    return apiFetch<EduPractice>("/v1/edu/practice", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduPracticeAnswer(
+    token: string,
+    sessionId: string,
+    body: { question_id: string; user_answer_md: string },
+  ) {
+    return apiFetch<EduPracticeAnswer>(`/v1/edu/practice/${sessionId}/answer`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduOfficialSources(token: string) {
+    return apiFetch<EduOfficialSource[]>("/v1/edu/official/sources", { token });
+  },
+
+  eduOfficialSync(
+    token: string,
+    body: {
+      source_id: string;
+      workspace_id: string;
+      accept_license: boolean;
+      feed_url?: string;
+      pack_id?: string;
+    },
+  ) {
+    return apiFetch<EduOfficialSyncResult>("/v1/edu/official/sync", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  eduWebSearch(
+    token: string,
+    body: {
+      query: string;
+      workspace_id: string;
+      subject?: string;
+      stage?: string;
+      grade?: number;
+      limit?: number;
+      auto_import?: boolean;
+      accept_license?: boolean;
+    },
+  ) {
+    return apiFetch<EduWebSearchResult>("/v1/edu/web-search", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
   },
 
   usageSummary(token: string) {

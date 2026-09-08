@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 const links = [
   { href: "/app", label: "文库" },
   { href: "/app/ask", label: "问答" },
+  { href: "/app/edu", label: "学习" },
   { href: "/app/graph", label: "知识图谱" },
   { href: "/app/members", label: "成员" },
   { href: "/app/governance", label: "治理" },

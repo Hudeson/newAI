@@ -60,7 +60,7 @@
 | E6 | 前端可用 | Next.js 上传/状态/简单问答 | E5 |
 | E7 | 治理与企业件 | 配额、Agent、SCIM、连接器… | E6 |
 
-**当前执行焦点：OPT 检索与摄入升级（对照 DeepSeek 个人知识库教程）**；方案见 [`optimization-plan-full-pipeline.md`](./optimization-plan-full-pipeline.md)。
+**当前执行焦点：EDU K12 试点（EDU.1–3）已落地；可与 OPT.1 / WIKI.1 并行。** 见 [`education-kb-design.md`](./education-kb-design.md)。
 
 ---
 
@@ -337,3 +337,18 @@ docs/               # 已有设计
 | WIKI.1–6 实现 | 待开工 | 建议分支 `cursor/wiki-compile-layer-4365` |
 
 **理念锁定：** Raw 不可变 · Wiki 由 LLM 维护 · Schema 共进化 · Ingest/Query/Lint 三操作 · 与 RAG/ACL **互补**（Wiki-primary 综合 + Chunk 级引用）。
+
+---
+
+## 19. EDU 教育知识库进度
+
+| 阶段 | 状态 | 文档 |
+|------|------|------|
+| EDU.0 设计 | **完成** | [`education-kb-design.md`](./education-kb-design.md) |
+| EDU.1 表 + CRUD | **完成** | migration `0008` + `shared/education.py` + `/v1/edu/*` |
+| EDU.2 讲题 / 相似 | **完成** | `explain` + anchors ACL + 知识点相似 |
+| EDU.3 学习 UI | **完成** | `/app/edu` + 演示包 seed |
+| EDU.3.5 官网同步 | **完成** | `/v1/edu/official/*` + 白名单拉取 |
+| EDU.4–6 | 待开工 | 向量相似、Wiki 对齐、多学科订阅 |
+
+**设计锁定**：题目一等公民；内容包强制 `license_type`；禁止默认「全国盗版教辅」；讲题引用二次 ACL；`EDU_ENABLED` 可关。官网同步仅允许白名单域名且必须 `accept_license`；默认 `EDU_OFFICIAL_MODE=fixture`。
