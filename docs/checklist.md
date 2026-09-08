@@ -95,3 +95,16 @@
 - [ ] OPT.4 Ask SSE + DeepSeek 一键档
 - [ ] OPT.5 增量重嵌 + 评测门禁 CI
 - [ ] OPT.6 加密加固 / 多模态
+
+## WIKI LLM Wiki 编译层（Karpathy）
+
+> 理念设计：[`llm-wiki-design.md`](./llm-wiki-design.md)  
+> 默认 Schema：[`wiki-schema-default.md`](./wiki-schema-default.md)
+
+- [x] WIKI.0 完善设计文档
+- [ ] WIKI.1 Schema + 表结构
+- [ ] WIKI.2 Ingest → source/index/log
+- [ ] WIKI.3 entity/concept + links
+- [ ] WIKI.4 Ask wiki 检索 + 归档
+- [ ] WIKI.5 Lint + `/app/wiki`
+- [ ] WIKI.6 监督审批 + KG 投影

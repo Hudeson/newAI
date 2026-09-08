@@ -326,3 +326,14 @@ docs/               # 已有设计
 | OPT.6 加密 / 多模态 | 待开工 | |
 
 **不照搬：** 本地 DeepSeek V3 全量权重 + LoRA 微调不作默认路径；用 Gateway 接 DeepSeek API，优先补真向量与混合检索。
+
+---
+
+## 18. LLM Wiki 进度
+
+| 阶段 | 状态 | 文档 |
+|------|------|------|
+| WIKI.0 设计 | **完成** | [`llm-wiki-design.md`](./llm-wiki-design.md)、[`wiki-schema-default.md`](./wiki-schema-default.md) |
+| WIKI.1–6 实现 | 待开工 | 建议分支 `cursor/wiki-compile-layer-4365` |
+
+**理念锁定：** Raw 不可变 · Wiki 由 LLM 维护 · Schema 共进化 · Ingest/Query/Lint 三操作 · 与 RAG/ACL **互补**（Wiki-primary 综合 + Chunk 级引用）。
